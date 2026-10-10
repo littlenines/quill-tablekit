@@ -1,7 +1,8 @@
 import Quill from 'quill'
-import { BLOT_NAMES, CLASS_NAMES, HEADER_BACKGROUND } from '../config/constants'
+import { BLOT_NAMES, CELL_PADDING_STYLES, CLASS_NAMES, HEADER_BACKGROUND, STRIPE_BACKGROUND } from '../config/constants'
 import { CELL_DATA_ATTRIBUTES, readCellValue } from '../model/cellValue'
 import type { CellArea } from '../model/grid'
+import { normalizeBorderStyle, normalizeCellPadding } from '../model/properties'
 import type { TableModel } from '../model/TableModel'
 import { indexes } from '../utils/array'
 import { Parchment, type ParchmentTypes } from '../utils/quill'
@@ -36,6 +37,7 @@ const tagsWithoutEditorMarkup = (
   element: Element,
   extraStyle?: string,
   exportedTagName?: string,
+  extraAttributes: Record<string, string> = {},
 ): [openingTag: string, closingTag: string] => {
   const cleanCopy = exportedTagName
     ? document.createElement(exportedTagName)
@@ -47,7 +49,12 @@ const tagsWithoutEditorMarkup = (
 
   for (const attributeName of EDITOR_ONLY_ATTRIBUTES) cleanCopy.removeAttribute(attributeName)
 
+  for (const [attributeName, attributeValue] of Object.entries(extraAttributes)) {
+    cleanCopy.setAttribute(attributeName, attributeValue)
+  }
+
   cleanCopy.style.removeProperty('--qlt-border')
+  cleanCopy.style.removeProperty('--qlt-table-stripe')
 
   cleanCopy.classList.remove(...[...cleanCopy.classList].filter((className) => className.startsWith('qlt-')))
 
@@ -64,21 +71,35 @@ const tagsWithoutEditorMarkup = (
   return [cleanCopy.outerHTML.slice(0, -closingTag.length), closingTag]
 }
 
+const isStripedRow = (rowNumber: number, hasHeader: boolean) =>
+  hasHeader ? rowNumber > 0 && rowNumber % 2 === 0 : rowNumber % 2 === 1
+
 const cellTags = (cellElement: HTMLElement): [openingTag: string, closingTag: string] => {
   const tableElement = cellElement.closest('table')
+  const rowNumber = (cellElement.parentElement as HTMLTableRowElement | null)?.sectionRowIndex ?? 0
+  const { header, striped, borderStyle, cellPadding } = tableElement?.dataset ?? {}
+  const hasHeader = header != null
   const borderColor = tableElement?.style.getPropertyValue('--qlt-border').trim() || '#000'
-  const borderStyle = `border: 1px solid ${borderColor};`
-  const isInFirstRow = cellElement.parentElement?.previousElementSibling == null
+  const lineStyle = normalizeBorderStyle(borderStyle) ?? 'solid'
+  const padding = normalizeCellPadding(cellPadding)
+  const cellStyles = [
+    lineStyle === 'none' ? 'border: none;' : `border: 1px ${lineStyle} ${borderColor};`,
+    padding ? `padding: ${CELL_PADDING_STYLES[padding]};` : '',
+  ]
 
-  if (tableElement?.hasAttribute('data-header') && isInFirstRow) {
-    return tagsWithoutEditorMarkup(
-      cellElement,
-      `${borderStyle} text-align: left; background-color: ${HEADER_BACKGROUND};`,
-      'th',
-    )
+  if (hasHeader && rowNumber === 0) {
+    const headerStyle = [...cellStyles, `text-align: left; background-color: ${HEADER_BACKGROUND};`]
+
+    return tagsWithoutEditorMarkup(cellElement, headerStyle.filter(Boolean).join(' '), 'th', { scope: 'col' })
   }
 
-  return tagsWithoutEditorMarkup(cellElement, borderStyle)
+  if (striped != null && isStripedRow(rowNumber, hasHeader) && !cellElement.style.backgroundColor) {
+    const stripeColor = tableElement?.style.getPropertyValue('--qlt-table-stripe').trim() || STRIPE_BACKGROUND
+
+    cellStyles.push(`background-color: ${stripeColor};`)
+  }
+
+  return tagsWithoutEditorMarkup(cellElement, cellStyles.filter(Boolean).join(' '))
 }
 
 const blotToHTML = (blot: Blot, startIndex: number, length: number): string => {
@@ -116,7 +137,9 @@ export const tableHTML = (table: ParchmentTypes.ParentBlot, startIndex: number, 
   const isCell = (blot: Blot) => blot.statics.blotName === BLOT_NAMES.cell
   const selectedCells = table.descendants(isCell, startIndex, length) as ParchmentTypes.ParentBlot[]
 
-  if (selectedCells.length === 1) {
+  const coversWholeTable = startIndex === 0 && length >= table.length()
+
+  if (selectedCells.length === 1 && !coversWholeTable) {
     const [onlyCell] = selectedCells
 
     return childrenToHTML(onlyCell, startIndex - onlyCell.offset(table), length)
@@ -172,7 +195,8 @@ const wrapInTable = (tableElement: HTMLElement, columnWidths: number[] | undefin
 
   exportedTable.style.width = columnWidths ? `${columnWidths.reduce((total, width) => total + width, 0)}px` : ''
 
+  const caption = tableElement.dataset.caption ? `<caption>${escapeText(tableElement.dataset.caption)}</caption>` : ''
   const [openingTag, closingTag] = tagsWithoutEditorMarkup(exportedTable, tableStyle)
 
-  return `${openingTag}${colgroup}${tableContent}${closingTag}`
+  return `${openingTag}${caption}${colgroup}${tableContent}${closingTag}`
 }

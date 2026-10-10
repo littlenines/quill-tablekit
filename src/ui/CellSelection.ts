@@ -4,7 +4,7 @@ import type { TableCellLine } from '../blots'
 import { lastSelectedLine, lineAt } from '../editing/selection'
 import { cellsInArea } from '../model/grid'
 import { createElement } from './dom'
-import { areaBetweenCells, boundingBoxOf, tableGrid, toContainerPosition } from './domGrid'
+import { areaBetweenCells, boundingBoxOf, scaleOf, tableGrid, toContainerPosition } from './domGrid'
 
 const SELECTING_CLASS = 'qlt-cells-selected'
 
@@ -14,42 +14,56 @@ export class CellSelection {
   #quill: Quill
   #container: HTMLElement
   #highlight = createElement('div', { className: 'qlt-selection' })
+  #activeCell = createElement('div', { className: 'qlt-active-cell' })
 
   constructor(quill: Quill, container: HTMLElement) {
     this.#quill = quill
     this.#container = container
-    container.append(this.#highlight)
+    container.append(this.#activeCell, this.#highlight)
   }
 
   update(range: Range | null): void {
     const selectedCells = range ? this.#selectedCells(range) : null
     const highlightBox = selectedCells ? boundingBoxOf(selectedCells) : null
+    const activeCell = range && !highlightBox && this.#quill.isEnabled() ? this.#cellAt(range) : null
 
-    if (!highlightBox) {
-      this.hide()
-      return
-    }
-
-    const { left, top } = toContainerPosition(this.#container, highlightBox.left, highlightBox.top)
-
-    Object.assign(this.#highlight.style, {
-      display: 'block',
-      left: `${left}px`,
-      top: `${top}px`,
-      width: `${highlightBox.width}px`,
-      height: `${highlightBox.height}px`,
-    })
-    this.#container.classList.add(SELECTING_CLASS)
+    this.#cover(this.#highlight, highlightBox)
+    this.#cover(this.#activeCell, activeCell?.getBoundingClientRect() ?? null)
+    this.#container.classList.toggle(SELECTING_CLASS, highlightBox != null)
   }
 
   hide(): void {
-    this.#highlight.style.display = 'none'
-    this.#container.classList.remove(SELECTING_CLASS)
+    this.update(null)
   }
 
   destroy(): void {
     this.hide()
     this.#highlight.remove()
+    this.#activeCell.remove()
+  }
+
+  #cover(overlay: HTMLElement, clientBox: DOMRect | null): void {
+    if (!clientBox) {
+      overlay.style.display = 'none'
+      return
+    }
+
+    const { left, top } = toContainerPosition(this.#container, clientBox.left, clientBox.top)
+    const scale = scaleOf(this.#container)
+
+    Object.assign(overlay.style, {
+      display: 'block',
+      left: `${left}px`,
+      top: `${top}px`,
+      width: `${clientBox.width / scale}px`,
+      height: `${clientBox.height / scale}px`,
+    })
+  }
+
+  #cellAt(range: Range): HTMLTableCellElement | null {
+    const startCell = cellElementOf(lineAt(this.#quill, range.index))
+
+    return startCell && startCell === cellElementOf(lastSelectedLine(this.#quill, range)) ? startCell : null
   }
 
   #selectedCells(range: Range): (HTMLTableCellElement | null)[] | null {

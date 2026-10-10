@@ -25,6 +25,10 @@ The methods work on the table where the cursor is. If the editor doesn't have fo
 | `insertColumnLeft()`, `insertColumnRight()`        | Adds a column left or right of the selected cells.                                                                     |
 | `deleteRow()`                                      | Removes every row the selection touches. If that's all of them, the table is removed.                                  |
 | `deleteColumn()`                                   | Same, for columns.                                                                                                     |
+| `moveRowUp()`, `moveRowDown()`                     | Swaps the selected rows with the row above or below. Merged cells move along with every row they cover.                |
+| `moveColumnLeft()`, `moveColumnRight()`            | Same, for columns. The column widths move too.                                                                         |
+| `duplicateRow()`                                   | Adds a copy of the selected rows right below them, with their text and colors.                                         |
+| `duplicateColumn()`                                | Adds a copy of the selected columns on their right. The table keeps its width.                                         |
 | `selectRow()`, `selectColumn()`                    | Selects every cell in the rows or columns the selection touches.                                                       |
 | `copyTable()`                                      | Copies the whole table to the clipboard as HTML and as tab-separated text. Returns a promise with `true` if it worked. |
 | `insertParagraphAbove()`, `insertParagraphBelow()` | Adds an empty line right before or after the table and moves the cursor there.                                         |
@@ -57,17 +61,24 @@ Cell properties:
 
 Table properties:
 
-| Field         | Values                                                  | Default  |
-| ------------- | ------------------------------------------------------- | -------- |
-| `header`      | `true` makes the first row a header row                 | `false`  |
-| `align`       | `'left'`, `'center'`, `'right'`                         | `'left'` |
-| `borderColor` | any CSS color, or `null` for the default                | `null`   |
-| `background`  | any CSS color, or `null`. Setting it colors every cell. | `null`   |
+| Field         | Values                                                                         | Default    |
+| ------------- | ------------------------------------------------------------------------------ | ---------- |
+| `header`      | `true` makes the first row a header row                                        | `false`    |
+| `align`       | `'left'`, `'center'`, `'right'`                                                | `'left'`   |
+| `borderStyle` | `'solid'`, `'dashed'`, `'none'`                                                | `'solid'`  |
+| `borderColor` | any CSS color, or `null` for the default                                       | `null`     |
+| `cellPadding` | space inside the cells: `'compact'`, `'normal'`, `'wide'`                      | `'normal'` |
+| `striped`     | `true` gives every other row a light gray background                           | `false`    |
+| `stripeColor` | any CSS color for the striped rows, or `null` for the default light gray       | `null`     |
+| `background`  | any CSS color, or `null`. Setting it colors every cell.                        | `null`     |
+| `caption`     | a title shown above the table, saved as `<caption>`. `''` removes it. Max 300. | `''`       |
 
 `getTableProperties()` only gives you a `background` when every cell has the same one. Otherwise it's `null`.
 
 ```js
 tableKit.setTableProperties({ header: true, borderColor: '#6fa8dc' })
+tableKit.setTableProperties({ striped: true, cellPadding: 'compact', caption: 'Sales by region' })
+tableKit.setTableProperties({ striped: true, stripeColor: '#e8f0fe' })
 tableKit.setCellProperties({ background: '#fff2cc', verticalAlign: 'middle' })
 tableKit.setCellProperties({ background: null })
 ```
@@ -77,7 +88,7 @@ A value that isn't a valid color or alignment is treated like `null`. Each call 
 The types are exported too:
 
 ```ts
-import type { CellProperties, TableProperties } from 'quill-tablekit'
+import type { CellProperties, TableProperties, BorderStyle, CellPadding } from 'quill-tablekit'
 ```
 
 ## Column widths and row heights
@@ -94,6 +105,13 @@ tableKit.setRowHeights(table, [60, null, null])
 ```
 
 Like dragging, each call is one undo step.
+
+Two shortcuts work on the table the cursor is in:
+
+| Method                   | What it does                                                                                                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `equalizeColumnWidths()` | Makes every column the same width. The table keeps its width.                                                                                               |
+| `fitTableToWidth()`      | Makes the table as wide as the editor and keeps how wide the columns are compared to each other. Nothing to do on a new table, which is already full width. |
 
 ## Other
 

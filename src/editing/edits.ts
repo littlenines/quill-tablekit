@@ -1,4 +1,7 @@
-import type { CellData } from '../model/TableModel'
+import * as arrange from '../model/arrange'
+import type { CellData } from '../model/cell'
+import * as merging from '../model/merging'
+import * as rowsAndColumns from '../model/rowsAndColumns'
 import type { TableContext } from './context'
 
 export type TableEdit = (tableContext: TableContext) => CellData | null | undefined
@@ -12,16 +15,33 @@ const keepingCursorCell =
 
 export const insertRow = (side: 'above' | 'below'): TableEdit =>
   keepingCursorCell(({ model, selectedArea }) =>
-    model.insertRow(side === 'above' ? selectedArea.top : selectedArea.bottom),
+    rowsAndColumns.insertRow(model, side === 'above' ? selectedArea.top : selectedArea.bottom),
   )
 
 export const insertColumn = (side: 'left' | 'right', minWidth: number): TableEdit =>
   keepingCursorCell(({ model, selectedArea }) =>
-    model.insertColumn(side === 'left' ? selectedArea.left : selectedArea.right, minWidth),
+    rowsAndColumns.insertColumn(model, side === 'left' ? selectedArea.left : selectedArea.right, minWidth),
   )
 
+export const moveRows =
+  (direction: -1 | 1): TableEdit =>
+  ({ model, selectedArea, startCell }) =>
+    arrange.moveRows(model, selectedArea, direction) ? startCell : undefined
+
+export const moveColumns =
+  (direction: -1 | 1): TableEdit =>
+  ({ model, selectedArea, startCell }) =>
+    arrange.moveColumns(model, selectedArea, direction) ? startCell : undefined
+
+export const duplicateRows: TableEdit = keepingCursorCell(({ model, selectedArea }) =>
+  arrange.duplicateRows(model, selectedArea),
+)
+
+export const duplicateColumns = (minWidth: number): TableEdit =>
+  keepingCursorCell(({ model, selectedArea }) => arrange.duplicateColumns(model, selectedArea, minWidth))
+
 export const deleteRows: TableEdit = ({ model, selectedArea }) => {
-  model.deleteRows(selectedArea.top, selectedArea.bottom)
+  rowsAndColumns.deleteRows(model, selectedArea.top, selectedArea.bottom)
 
   if (model.isEmpty) return null
 
@@ -29,7 +49,7 @@ export const deleteRows: TableEdit = ({ model, selectedArea }) => {
 }
 
 export const deleteColumns: TableEdit = ({ model, selectedArea }) => {
-  model.deleteColumns(selectedArea.left, selectedArea.right)
+  rowsAndColumns.deleteColumns(model, selectedArea.left, selectedArea.right)
 
   if (model.isEmpty) return null
 
@@ -43,6 +63,7 @@ export const deleteTable: TableEdit = ({ model }) => {
   return null
 }
 
-export const mergeCells: TableEdit = ({ model, selectedArea }) => model.merge(selectedArea)
+export const mergeCells: TableEdit = ({ model, selectedArea }) => merging.mergeCells(model, selectedArea)
 
-export const splitCell: TableEdit = ({ model, startCell }) => (model.split(startCell) ? startCell : undefined)
+export const splitCell: TableEdit = ({ model, startCell }) =>
+  merging.splitCell(model, startCell) ? startCell : undefined

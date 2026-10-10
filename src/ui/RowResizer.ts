@@ -2,7 +2,7 @@ import type Quill from 'quill'
 import { MIN_ROW_HEIGHT } from '../config/constants'
 import { createElement } from './dom'
 import { followMouseUntilRelease } from './dragging'
-import { naturalRowHeight, savedRowHeights, toContainerPosition } from './domGrid'
+import { naturalRowHeight, savedRowHeights, scaleOf, toContainerPosition } from './domGrid'
 
 const EDGE_GRAB_DISTANCE = 6
 
@@ -12,6 +12,7 @@ interface HoveredRowEdge {
 }
 
 interface RowDrag extends HoveredRowEdge {
+  scale: number
   startClientY: number
   startEdgeClientY: number
   startHeight: number
@@ -103,7 +104,7 @@ export class RowResizer {
       display: 'block',
       left: `${left}px`,
       top: `${top - 5}px`,
-      width: `${tableBox.width}px`,
+      width: `${tableBox.width / scaleOf(tableElement)}px`,
     })
   }
 
@@ -115,14 +116,17 @@ export class RowResizer {
     const { tableElement, rowIndex } = this.#hoveredEdge
     const rowElement = tableElement.rows[rowIndex]
     const rowBox = rowElement.getBoundingClientRect()
+    const scale = scaleOf(tableElement)
+    const startHeight = Math.round(rowBox.height / scale)
 
     this.#activeDrag = {
       ...this.#hoveredEdge,
+      scale,
       startClientY: event.clientY,
       startEdgeClientY: rowBox.bottom,
-      startHeight: Math.round(rowBox.height),
+      startHeight,
       minHeight: naturalRowHeight(rowElement, MIN_ROW_HEIGHT),
-      newHeight: Math.round(rowBox.height),
+      newHeight: startHeight,
     }
     this.#handle.classList.add('is-dragging')
     this.#dragListeners = followMouseUntilRelease('qlt-resizing-rows', this.#followMouse, this.#finishDrag)
@@ -133,8 +137,10 @@ export class RowResizer {
 
     if (!drag) return
 
-    drag.newHeight = rowHeightAfterDrag(drag.startHeight, event.clientY - drag.startClientY, drag.minHeight)
-    this.#placeHandle(drag.tableElement, drag.startEdgeClientY + drag.newHeight - drag.startHeight)
+    const dragDistance = (event.clientY - drag.startClientY) / drag.scale
+
+    drag.newHeight = rowHeightAfterDrag(drag.startHeight, dragDistance, drag.minHeight)
+    this.#placeHandle(drag.tableElement, drag.startEdgeClientY + (drag.newHeight - drag.startHeight) * drag.scale)
   }
 
   #finishDrag = (): void => {

@@ -2,17 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { Delta } from 'quill'
 import { CELL_FORMAT } from '../../src/config/constants'
 import { TableModel } from '../../src/model/TableModel'
-import type { TableCellValue } from '../../src/model/cellValue'
-
-const cellValuesIn = (tableDelta: Delta): TableCellValue[] =>
-  tableDelta.ops
-    .filter((operation) => operation.attributes?.[CELL_FORMAT])
-    .map((operation) => operation.attributes?.[CELL_FORMAT] as TableCellValue)
-
-const tableLine = (text: string, cellValue: Partial<TableCellValue> & { row: string; cell: string }): Delta =>
-  new Delta().insert(text).insert('\n', { [CELL_FORMAT]: { table: 't', rowspan: 1, colspan: 1, ...cellValue } })
-
-const sumOf = (numbers: number[]) => numbers.reduce((total, number) => total + number, 0)
+import { mergeCells } from '../../src/model/merging'
+import { cellValuesIn, tableLine } from './modelHelpers'
 
 describe('TableModel', () => {
   it('creates an empty grid and writes one line per cell', () => {
@@ -66,36 +57,10 @@ describe('TableModel', () => {
     expect(model.grid[1][1]).not.toBe(model.grid[1][2])
   })
 
-  it('merges a block of cells into the top-left cell and keeps all the text', () => {
-    const model = TableModel.create(2, 2)
-
-    model.grid[0][0].content = new Delta().insert('one\n')
-    model.grid[1][1].content = new Delta().insert('four\n')
-
-    const mergedCell = model.merge({ top: 0, left: 0, bottom: 2, right: 2 })
-
-    expect(mergedCell).toBe(model.grid[0][0])
-    expect(mergedCell?.content).toEqual(new Delta().insert('one\nfour\n'))
-    expect(model.rowCount).toBe(1)
-    expect(model.columnCount).toBe(1)
-  })
-
-  it('writes rowspan and colspan for a partial merge', () => {
-    const model = TableModel.create(3, 3)
-
-    model.merge({ top: 0, left: 0, bottom: 2, right: 2 })
-
-    const [mergedCellValue] = cellValuesIn(model.toDelta())
-
-    expect(mergedCellValue.rowspan).toBe(2)
-    expect(mergedCellValue.colspan).toBe(2)
-    expect(model.cellsInArea({ top: 0, left: 0, bottom: 3, right: 3 })).toHaveLength(6)
-  })
-
   it('grows a selection to whole merged cells', () => {
     const model = TableModel.create(3, 3)
 
-    model.merge({ top: 1, left: 1, bottom: 3, right: 3 })
+    mergeCells(model, { top: 1, left: 1, bottom: 3, right: 3 })
 
     expect(model.expandToWholeCells({ top: 0, left: 1, bottom: 2, right: 2 })).toEqual({
       top: 0,
@@ -103,68 +68,6 @@ describe('TableModel', () => {
       bottom: 3,
       right: 3,
     })
-  })
-
-  it('splits a merged cell back into single cells', () => {
-    const model = TableModel.create(3, 3)
-    const mergedCell = model.merge({ top: 0, left: 0, bottom: 2, right: 2 })
-
-    if (!mergedCell) throw new Error('merge failed')
-
-    expect(model.split(mergedCell)).toBe(true)
-    expect(model.cellsInArea({ top: 0, left: 0, bottom: 3, right: 3 })).toHaveLength(9)
-    expect(model.split(model.grid[2][2])).toBe(false)
-  })
-
-  it('extends a merged cell when a row is inserted through it', () => {
-    const model = TableModel.create(3, 2)
-    const mergedCell = model.merge({ top: 0, left: 0, bottom: 2, right: 1 })
-
-    model.insertRow(1)
-
-    expect(model.rowCount).toBe(4)
-    expect(model.grid[1][0]).toBe(mergedCell)
-    expect(model.grid[1][1]).not.toBe(model.grid[0][1])
-  })
-
-  it('inserts a column without changing the total width', () => {
-    const model = TableModel.create(1, 2)
-
-    model.setColumnWidths([200, 200])
-    model.insertColumn(1, 40)
-
-    expect(model.columnWidths).toHaveLength(3)
-    expect(sumOf(model.columnWidths ?? [])).toBeCloseTo(400, -1)
-  })
-
-  it('deletes rows and columns, shrinking merged cells that cross them', () => {
-    const model = TableModel.create(3, 3)
-    const mergedCell = model.merge({ top: 0, left: 0, bottom: 3, right: 1 })
-
-    model.deleteRows(1, 2)
-    expect(model.rowCount).toBe(2)
-    expect(model.grid[1][0]).toBe(mergedCell)
-
-    model.deleteColumns(0, 1)
-    expect(model.columnCount).toBe(2)
-    expect(model.grid.flat()).not.toContain(mergedCell)
-  })
-
-  it('is empty after deleting every row', () => {
-    const model = TableModel.create(2, 2)
-
-    model.deleteRows(0, 2)
-    expect(model.isEmpty).toBe(true)
-    expect(model.toDelta().length()).toBe(0)
-  })
-
-  it('folds the width of a removed column into the column on its left', () => {
-    const model = TableModel.create(1, 3)
-
-    model.setColumnWidths([100, 100, 100])
-    model.merge({ top: 0, left: 1, bottom: 1, right: 3 })
-
-    expect(model.columnWidths).toEqual([100, 200])
   })
 
   it('reports where each cell starts in the written Delta', () => {
@@ -186,89 +89,6 @@ describe('TableModel', () => {
     expect(model.tableAlign).toBe('center')
     expect(model.grid[0][0].style).toEqual({ background: '#fff2cc' })
     expect(model.toDelta()).toEqual(tableDelta)
-  })
-
-  it('gives new rows and columns the look of the cells next to them', () => {
-    const model = TableModel.create(1, 1)
-
-    model.updateCellStyle([model.grid[0][0]], { background: '#fff2cc' })
-    model.insertRow(1)
-    model.insertColumn(1)
-
-    expect(model.grid.flat().every((cell) => cell.style.background === '#fff2cc')).toBe(true)
-  })
-
-  it('gives every cell of a split cell its look', () => {
-    const model = TableModel.create(2, 2)
-    const mergedCell = model.merge({ top: 0, left: 0, bottom: 1, right: 2 })
-
-    if (!mergedCell) throw new Error('merge failed')
-
-    model.updateCellStyle([mergedCell], { verticalAlign: 'bottom' })
-    model.split(mergedCell)
-
-    const verticalAligns = model.grid.map((row) => row.map((cell) => cell.style.verticalAlign))
-
-    expect(verticalAligns).toEqual([
-      ['bottom', 'bottom'],
-      [undefined, undefined],
-    ])
-  })
-
-  it('removes a style when it is set to null', () => {
-    const model = TableModel.create(1, 1)
-    const [cell] = model.grid[0]
-
-    model.updateCellStyle([cell], { background: '#fff2cc', verticalAlign: 'middle' })
-    model.updateCellStyle([cell], { background: null })
-
-    expect(cell.style).toEqual({ verticalAlign: 'middle' })
-  })
-
-  it('aligns every line of a cell and keeps their other attributes', () => {
-    const model = TableModel.create(1, 1)
-    const [cell] = model.grid[0]
-
-    cell.content = new Delta().insert('one\n').insert('two').insert('\n', { direction: 'rtl' })
-    model.setTextAlign([cell], 'center')
-
-    expect(cell.content).toEqual(
-      new Delta()
-        .insert('one')
-        .insert('\n', { align: 'center' })
-        .insert('two')
-        .insert('\n', { direction: 'rtl', align: 'center' }),
-    )
-
-    model.setTextAlign([cell], undefined)
-
-    expect(cell.content).toEqual(new Delta().insert('one\ntwo').insert('\n', { direction: 'rtl' }))
-  })
-
-  it('keeps row heights with their rows', () => {
-    const tableDelta = new Delta()
-      .concat(tableLine('A', { row: 'r1', cell: 'c1', rowHeight: 60 }))
-      .concat(tableLine('B', { row: 'r2', cell: 'c2' }))
-
-    const model = TableModel.fromDelta(tableDelta)
-
-    expect(model.rowHeights).toEqual([60, undefined])
-    expect(model.toDelta()).toEqual(tableDelta)
-
-    model.insertRow(0)
-    expect(model.rowHeights).toEqual([undefined, 60, undefined])
-
-    model.deleteRows(0, 1)
-    expect(model.rowHeights).toEqual([60, undefined])
-  })
-
-  it('adds the heights of two rows together when merging makes them one', () => {
-    const model = TableModel.create(2, 1)
-
-    model.setRowHeights([40, 30])
-    model.merge({ top: 0, left: 0, bottom: 2, right: 1 })
-
-    expect(model.rowHeights).toEqual([70])
   })
 
   it('ignores row heights that are not positive numbers', () => {

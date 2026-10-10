@@ -1,21 +1,11 @@
 import { CELL_FORMAT } from '../config/constants'
 import { indexes } from '../utils/array'
 import { Delta } from '../utils/quill'
+import { emptyCell, type CellData } from './cell'
 import { makeId, normalizeCellValue, type TableCellValue } from './cellValue'
 import { cellAreas, cellsInArea, expandToWholeCells, placeCells, type CellArea, type SpannedCell } from './grid'
-import { withoutEmptyValues, type CellStyle, type TableAlign, type TextAlign } from './properties'
-
-export interface CellData {
-  id: string
-  content: Delta
-  style: CellStyle
-}
-
-export interface PasteLimits {
-  maxRows: number
-  maxColumns: number
-  minColumnWidth: number
-}
+import { sumOf } from './layout'
+import { withoutEmptyValues, type BorderStyle, type CellPadding, type CellStyle, type TableAlign } from './properties'
 
 export interface PlacedCell {
   cell: CellData
@@ -25,34 +15,8 @@ export interface PlacedCell {
   colspan: number
 }
 
-const emptyCell = (style: CellStyle = {}): CellData => ({
-  id: makeId('cell'),
-  content: new Delta().insert('\n'),
-  style: { ...style },
-})
-
 const cellStyleOf = ({ background, verticalAlign }: TableCellValue): CellStyle =>
   withoutEmptyValues({ background, verticalAlign })
-
-const isEmptyContent = (content: Delta) => content.length() <= 1
-
-const emptyContentKeepingLineFormat = (content: Delta): Delta => {
-  let firstLineAttributes: Record<string, unknown> = {}
-
-  content.eachLine((_lineContent, lineAttributes) => {
-    firstLineAttributes = lineAttributes
-    return false
-  })
-
-  const hasAttributes = Object.keys(firstLineAttributes).length > 0
-
-  return new Delta().insert('\n', hasAttributes ? firstLineAttributes : undefined)
-}
-
-const startsAt = (area: CellArea | undefined, rowIndex: number, columnIndex: number) =>
-  area?.top === rowIndex && area.left === columnIndex
-
-const sumOf = (numbers: number[]) => numbers.reduce((total, number) => total + number, 0)
 
 const uniqueId = (usedIds: Set<string>, preferredId: string, prefix: string): string => {
   const chosenId = usedIds.has(preferredId) ? makeId(prefix) : preferredId
@@ -61,6 +25,8 @@ const uniqueId = (usedIds: Set<string>, preferredId: string, prefix: string): st
   return chosenId
 }
 
+// A table as a grid: a merged cell is the same CellData in every spot it covers.
+// The changes to it (rows, merging, moving...) are functions in the files next to this one.
 export class TableModel {
   tableId: string
   rowIds: string[]
@@ -70,6 +36,11 @@ export class TableModel {
   header = false
   tableAlign: TableAlign | undefined
   borderColor: string | undefined
+  borderStyle: BorderStyle | undefined
+  cellPadding: CellPadding | undefined
+  striped = false
+  stripeColor: string | undefined
+  caption: string | undefined
 
   constructor(tableId: string, rowIds: string[], grid: CellData[][], columnWidths: number[] | null) {
     this.tableId = tableId
@@ -146,6 +117,11 @@ export class TableModel {
     model.header = firstCellValue?.header === true
     model.tableAlign = firstCellValue?.tableAlign
     model.borderColor = firstCellValue?.borderColor
+    model.borderStyle = firstCellValue?.borderStyle
+    model.cellPadding = firstCellValue?.cellPadding
+    model.striped = firstCellValue?.striped === true
+    model.stripeColor = firstCellValue?.stripeColor
+    model.caption = firstCellValue?.caption
 
     return model
   }
@@ -178,167 +154,12 @@ export class TableModel {
     return cellsInArea(this.grid, area)
   }
 
-  insertRow(rowIndex: number): CellData[] {
-    const newRow = indexes(this.columnCount).map((columnIndex) => {
-      const cellAbove = this.grid[rowIndex - 1]?.[columnIndex]
-      const cellBelow = this.grid[rowIndex]?.[columnIndex]
-
-      if (cellAbove && cellAbove === cellBelow) return cellAbove
-
-      return emptyCell((cellAbove ?? cellBelow)?.style)
-    })
-
-    this.grid.splice(rowIndex, 0, newRow)
-    this.rowIds.splice(rowIndex, 0, makeId('row'))
-    this.rowHeights.splice(rowIndex, 0, undefined)
-
-    return newRow
-  }
-
-  insertColumn(columnIndex: number, minWidth = 1): void {
-    for (const row of this.grid) {
-      const cellOnLeft = row[columnIndex - 1]
-      const cellOnRight = row[columnIndex]
-
-      const isInsideMergedCell = cellOnLeft && cellOnLeft === cellOnRight
-
-      row.splice(columnIndex, 0, isInsideMergedCell ? cellOnLeft : emptyCell((cellOnLeft ?? cellOnRight)?.style))
-    }
-
-    if (this.columnWidths) {
-      const totalWidth = sumOf(this.columnWidths)
-      const newWidth = this.columnWidths[columnIndex - 1] ?? this.columnWidths[columnIndex] ?? minWidth
-      const scale = totalWidth / (totalWidth + newWidth)
-
-      this.columnWidths.splice(columnIndex, 0, newWidth)
-      this.columnWidths = this.columnWidths.map((width) => Math.max(minWidth, Math.round(width * scale)))
-    }
-  }
-
-  deleteRows(firstRow: number, endRow: number): void {
-    this.grid.splice(firstRow, endRow - firstRow)
-    this.rowIds.splice(firstRow, endRow - firstRow)
-    this.rowHeights.splice(firstRow, endRow - firstRow)
-    this.normalize()
-  }
-
-  deleteColumns(firstColumn: number, endColumn: number): void {
-    for (const row of this.grid) row.splice(firstColumn, endColumn - firstColumn)
-
-    this.columnWidths?.splice(firstColumn, endColumn - firstColumn)
-
-    if (this.columnCount === 0) this.grid = []
-
-    this.normalize()
-  }
-
-  merge(selectedArea: CellArea): CellData | null {
-    const area = this.expandToWholeCells(selectedArea)
-    const cellsToMerge = this.cellsInArea(area)
-
-    if (cellsToMerge.length < 2) return null
-
-    const mergedCell = this.grid[area.top][area.left]
-    const cellsWithText = cellsToMerge.filter(({ content }) => !isEmptyContent(content))
-
-    if (cellsWithText.length > 0) {
-      mergedCell.content = cellsWithText.reduce((content, cell) => content.concat(cell.content), new Delta())
-    }
-
-    for (let rowIndex = area.top; rowIndex < area.bottom; rowIndex++) {
-      this.grid[rowIndex].fill(mergedCell, area.left, area.right)
-    }
-
-    this.normalize()
-    return mergedCell
-  }
-
-  split(mergedCell: CellData): boolean {
-    const area = this.areaOf(mergedCell)
-
-    if (!area || (area.bottom - area.top === 1 && area.right - area.left === 1)) return false
-
-    for (let rowIndex = area.top; rowIndex < area.bottom; rowIndex++) {
-      for (let columnIndex = area.left; columnIndex < area.right; columnIndex++) {
-        const isTopLeft = rowIndex === area.top && columnIndex === area.left
-
-        if (!isTopLeft) this.grid[rowIndex][columnIndex] = emptyCell(mergedCell.style)
-      }
-    }
-
-    return true
-  }
-
-  updateCellStyle(cells: CellData[], styleChanges: { [Field in keyof CellStyle]?: CellStyle[Field] | null }): void {
-    for (const cell of cells) cell.style = withoutEmptyValues({ ...cell.style, ...styleChanges })
-  }
-
-  setTextAlign(cells: CellData[], textAlign: TextAlign | undefined): void {
-    for (const cell of cells) {
-      let alignedContent = new Delta()
-
-      cell.content.eachLine((lineContent, { align: _previousAlign, ...otherAttributes }) => {
-        const lineAttributes = textAlign ? { ...otherAttributes, align: textAlign } : otherAttributes
-        const hasAttributes = Object.keys(lineAttributes).length > 0
-
-        alignedContent = alignedContent.concat(lineContent).insert('\n', hasAttributes ? lineAttributes : undefined)
-      })
-
-      cell.content = alignedContent
-    }
-  }
-
-  clearContent(cells: CellData[]): void {
-    for (const cell of cells) cell.content = emptyContentKeepingLineFormat(cell.content)
-  }
-
-  pasteTable(source: TableModel, top: number, left: number, limits: PasteLimits): CellArea {
-    const neededRows = Math.min(limits.maxRows, top + source.rowCount)
-    const neededColumns = Math.min(limits.maxColumns, left + source.columnCount)
-
-    while (this.rowCount < neededRows) this.insertRow(this.rowCount)
-
-    while (this.columnCount < neededColumns) this.insertColumn(this.columnCount, limits.minColumnWidth)
-
-    const targetAreas = cellAreas(this.grid)
-    const sourceAreas = cellAreas(source.grid)
-
-    for (const [sourceRow, sourceCells] of source.grid.entries()) {
-      for (const [sourceColumn, sourceCell] of sourceCells.entries()) {
-        const targetRow = top + sourceRow
-        const targetColumn = left + sourceColumn
-        const targetCell = this.grid[targetRow]?.[targetColumn]
-
-        if (!targetCell || !startsAt(targetAreas.get(targetCell), targetRow, targetColumn)) continue
-
-        const isSourceCellStart = startsAt(sourceAreas.get(sourceCell), sourceRow, sourceColumn)
-
-        targetCell.content = isSourceCellStart ? sourceCell.content : emptyContentKeepingLineFormat(targetCell.content)
-        targetCell.style = { ...sourceCell.style }
-      }
-    }
-
-    return {
-      top,
-      left,
-      bottom: Math.min(this.rowCount, top + source.rowCount),
-      right: Math.min(this.columnCount, left + source.columnCount),
-    }
-  }
-
   setRowHeights(rowHeights: (number | null | undefined)[] | null): void {
     this.rowHeights = this.rowIds.map((_rowId, rowIndex) => {
       const height = rowHeights?.[rowIndex]
 
       return height != null && Number.isFinite(height) && height > 0 ? Math.round(height) : undefined
     })
-  }
-
-  #foldRowHeightIntoRowAbove(rowIndex: number): void {
-    const [removedHeight] = this.rowHeights.splice(rowIndex, 1)
-    const heightAbove = this.rowHeights[rowIndex - 1]
-
-    this.rowHeights[rowIndex - 1] = heightAbove && removedHeight ? heightAbove + removedHeight : undefined
   }
 
   setColumnWidths(columnWidths: number[] | null): void {
@@ -354,6 +175,7 @@ export class TableModel {
     this.columnWidths = [...fittedWidths, ...indexes(missingColumns).map(() => averageWidth)]
   }
 
+  // Removes rows and columns where no cell starts, since those can't be written as lines
   normalize(): void {
     for (let rowIndex = this.rowCount - 1; rowIndex > 0; rowIndex--) {
       const rowAbove = this.grid[rowIndex - 1]
@@ -398,6 +220,11 @@ export class TableModel {
       header: this.header || undefined,
       tableAlign: this.tableAlign,
       borderColor: this.borderColor,
+      borderStyle: this.borderStyle,
+      cellPadding: this.cellPadding,
+      striped: this.striped || undefined,
+      stripeColor: this.stripeColor,
+      caption: this.caption,
     })
 
     for (const { cell, row, rowspan, colspan } of this.orderedCells()) {
@@ -430,5 +257,12 @@ export class TableModel {
     }
 
     return -1
+  }
+
+  #foldRowHeightIntoRowAbove(rowIndex: number): void {
+    const [removedHeight] = this.rowHeights.splice(rowIndex, 1)
+    const heightAbove = this.rowHeights[rowIndex - 1]
+
+    this.rowHeights[rowIndex - 1] = heightAbove && removedHeight ? heightAbove + removedHeight : undefined
   }
 }

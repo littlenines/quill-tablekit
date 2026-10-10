@@ -2,6 +2,7 @@ const icon = (paths: string, size = 16) =>
   `<svg viewBox="0 0 16 16" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`
 
 export const ICONS = {
+  insertTable: '',
   rows: icon('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M2 6.2h12M2 9.8h12"/>'),
   columns: icon('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M6 2.5v11M10 2.5v11"/>'),
   merge: icon('<path d="M2.5 3v10M13.5 3v10M5 8h6M7 6 5 8l2 2M9 6l2 2-2 2"/>'),

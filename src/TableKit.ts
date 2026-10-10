@@ -4,7 +4,7 @@ import { registerBlots, type TableContainer } from './blots'
 import { CELL_FORMAT } from './config/constants'
 import { resolveOptions, type ResolvedTableKitOptions, type TableKitOptions } from './config/options'
 import { clipboardContentOf, wholeTableArea, writeToClipboard } from './editing/cellClipboard'
-import { matchTableCell, matchTableRow } from './editing/clipboard'
+import { matchCaption, matchTableCell, matchTableRow } from './editing/clipboard'
 import * as commands from './editing/commands'
 import { canMerge, canSplit, getTableContext, type TableContext } from './editing/context'
 import * as edits from './editing/edits'
@@ -18,9 +18,11 @@ import {
 } from './editing/properties'
 import { isInTable } from './editing/selection'
 import type { CellProperties, TableProperties } from './model/properties'
+import { equalizeColumnWidths, fitToWidth } from './model/widths'
 import { injectStyles } from './styles/injectStyles'
 import { CellSelection } from './ui/CellSelection'
 import { ColumnResizer } from './ui/ColumnResizer'
+import { editorContentWidth } from './ui/domGrid'
 import { RowResizer } from './ui/RowResizer'
 import { TableControls } from './ui/TableControls'
 import { TableResizer } from './ui/TableResizer'
@@ -85,10 +87,19 @@ class TableKit extends Module<TableKitOptions> {
 
     quill.clipboard.addMatcher('td, th', matchTableCell)
     quill.clipboard.addMatcher('tr', matchTableRow)
+    quill.clipboard.addMatcher('caption', matchCaption)
     installKeyboard(quill, (direction) => this.moveToCell(direction))
     installInputGuards(quill, container, this.#settings, signal)
     quill.on('editor-change', this.#handleEditorChange)
-    quill.root.addEventListener('scroll', () => this.#cellSelection?.update(quill.getSelection()), { signal })
+    quill.root.addEventListener('scroll', () => this.#updateCellHighlight(), { signal })
+    window.addEventListener('resize', () => this.#updateCellHighlight(), { signal })
+    document.addEventListener('mousedown', () => this.#updateCellHighlight(), { signal })
+    document.addEventListener('focusin', () => this.#updateCellHighlight(), { signal })
+
+    const readOnlyObserver = new MutationObserver(() => this.#handleEditorChange())
+
+    readOnlyObserver.observe(quill.root, { attributes: true, attributeFilter: ['contenteditable'] })
+    signal.addEventListener('abort', () => readOnlyObserver.disconnect())
   }
 
   insertTable(rowCount: number, columnCount: number): void {
@@ -114,6 +125,42 @@ class TableKit extends Module<TableKitOptions> {
 
   insertColumnRight(): void {
     this.#edit(edits.insertColumn('right', this.#settings.minColumnWidth))
+  }
+
+  moveRowUp(): void {
+    this.#edit(edits.moveRows(-1))
+  }
+
+  moveRowDown(): void {
+    this.#edit(edits.moveRows(1))
+  }
+
+  moveColumnLeft(): void {
+    this.#edit(edits.moveColumns(-1))
+  }
+
+  moveColumnRight(): void {
+    this.#edit(edits.moveColumns(1))
+  }
+
+  duplicateRow(): void {
+    this.#edit(edits.duplicateRows)
+  }
+
+  duplicateColumn(): void {
+    this.#edit(edits.duplicateColumns(this.#settings.minColumnWidth))
+  }
+
+  equalizeColumnWidths(): void {
+    commands.changeTable(this.quill, this.#currentRange(), ({ model }) => equalizeColumnWidths(model))
+  }
+
+  fitTableToWidth(): void {
+    const editorWidth = editorContentWidth(this.quill)
+
+    commands.changeTable(this.quill, this.#currentRange(), ({ model }) =>
+      fitToWidth(model, editorWidth, this.#settings.minColumnWidth),
+    )
   }
 
   insertParagraphAbove(): void {
@@ -238,8 +285,15 @@ class TableKit extends Module<TableKitOptions> {
 
     if (range) this.#lastRange = range
 
-    this.#cellSelection?.update(range)
+    this.#updateCellHighlight(range)
     this.#controls?.updateActionBar(range)
+  }
+
+  // While the panel or the bar has the focus, the cells they change stay highlighted
+  #updateCellHighlight(range = this.quill.getSelection()): void {
+    const isUsingControls = this.#controls?.isInUse === true
+
+    this.#cellSelection?.update(range ?? (isUsingControls ? this.#lastRange : null))
   }
 }
 

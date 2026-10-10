@@ -1,10 +1,9 @@
 import type Quill from 'quill'
 import type { Range } from 'quill'
-import type { ResolvedTableKitOptions, TableKitLabels, TableMenuItemName } from '../config/options'
+import type { ResolvedTableKitOptions, TableKitIcons, TableKitLabels, TableMenuItemName } from '../config/options'
 import { lastSelectedLine, lineAt, tableOf } from '../editing/selection'
 import { createElement } from './dom'
-import { toContainerPosition } from './domGrid'
-import { ICONS } from './icons'
+import { scaleOf, toContainerPosition } from './domGrid'
 
 const GAP = 6
 
@@ -14,12 +13,13 @@ export interface ActionBarHandlers {
   isOpenFrom: (anchor: HTMLElement) => boolean
   isAnythingOpen: () => boolean
   closeAll: () => void
+  focusOpened: () => void
   onMoved: () => void
 }
 
 type ButtonSpec =
-  | { kind: 'items'; label: keyof TableKitLabels; icon: string; items: TableMenuItemName[] }
-  | { kind: 'item'; item: TableMenuItemName; icon: string; danger?: boolean }
+  | { kind: 'items'; label: keyof TableKitLabels; icon: keyof TableKitIcons; items: TableMenuItemName[] }
+  | { kind: 'item'; item: TableMenuItemName; icon: keyof TableKitIcons; danger?: boolean }
   | { kind: 'merge' }
   | { kind: 'separator' }
 
@@ -27,28 +27,37 @@ const BUTTON_SPECS: ButtonSpec[] = [
   {
     kind: 'items',
     label: 'rowsGroup',
-    icon: ICONS.rows,
-    items: ['insertRowAbove', 'insertRowBelow', 'selectRow', 'deleteRow'],
+    icon: 'rows',
+    items: ['insertRowAbove', 'insertRowBelow', 'moveRowUp', 'moveRowDown', 'duplicateRow', 'selectRow', 'deleteRow'],
   },
   {
     kind: 'items',
     label: 'columnsGroup',
-    icon: ICONS.columns,
-    items: ['insertColumnLeft', 'insertColumnRight', 'selectColumn', 'deleteColumn'],
+    icon: 'columns',
+    items: [
+      'insertColumnLeft',
+      'insertColumnRight',
+      'moveColumnLeft',
+      'moveColumnRight',
+      'duplicateColumn',
+      'equalColumnWidths',
+      'selectColumn',
+      'deleteColumn',
+    ],
   },
   { kind: 'merge' },
   { kind: 'separator' },
-  { kind: 'item', item: 'headerRow', icon: ICONS.headerRow },
-  { kind: 'item', item: 'cellProperties', icon: ICONS.cellProperties },
-  { kind: 'item', item: 'tableProperties', icon: ICONS.tableProperties },
+  { kind: 'item', item: 'headerRow', icon: 'headerRow' },
+  { kind: 'item', item: 'cellProperties', icon: 'cellProperties' },
+  { kind: 'item', item: 'tableProperties', icon: 'tableProperties' },
   { kind: 'separator' },
   {
     kind: 'items',
     label: 'moreGroup',
-    icon: ICONS.more,
-    items: ['insertParagraphAbove', 'insertParagraphBelow', 'copyTable'],
+    icon: 'more',
+    items: ['insertParagraphAbove', 'insertParagraphBelow', 'fitToWidth', 'copyTable'],
   },
-  { kind: 'item', item: 'deleteTable', icon: ICONS.deleteTable, danger: true },
+  { kind: 'item', item: 'deleteTable', icon: 'deleteTable', danger: true },
 ]
 
 const isAllowed = (spec: ButtonSpec, menu: TableMenuItemName[]): boolean => {
@@ -75,6 +84,13 @@ const withoutLooseSeparators = (specs: ButtonSpec[]): ButtonSpec[] => {
   return keptSpecs
 }
 
+const NEXT_BUTTON_KEYS: Record<string, (position: number, count: number) => number> = {
+  ArrowRight: (position, count) => (position + 1) % count,
+  ArrowLeft: (position, count) => (position - 1 + count) % count,
+  Home: () => 0,
+  End: (_position, count) => count - 1,
+}
+
 const fitsOnScreen = (top: number, height: number, visibleTop: number, visibleBottom: number) =>
   top >= visibleTop && top + height <= visibleBottom
 
@@ -82,6 +98,7 @@ export class ActionBar {
   #quill: Quill
   #container: HTMLElement
   #labels: TableKitLabels
+  #icons: TableKitIcons
   #handlers: ActionBarHandlers
   #bar: HTMLDivElement
   #mergeButton: HTMLButtonElement | null = null
@@ -94,23 +111,26 @@ export class ActionBar {
   constructor(
     quill: Quill,
     container: HTMLElement,
-    { labels, menu }: Pick<ResolvedTableKitOptions, 'labels' | 'menu'>,
+    { labels, menu, icons }: Pick<ResolvedTableKitOptions, 'labels' | 'menu' | 'icons'>,
     handlers: ActionBarHandlers,
     signal: AbortSignal,
   ) {
     this.#quill = quill
     this.#container = container
     this.#labels = labels
+    this.#icons = icons
     this.#handlers = handlers
     this.#bar = createElement(
       'div',
       { className: 'qlt-action-bar' },
-      { role: 'toolbar', 'aria-label': labels.actionBar },
+      { role: 'toolbar', 'aria-label': labels.actionBar, 'aria-keyshortcuts': 'Alt+F10' },
     )
 
     const allowedSpecs = withoutLooseSeparators(BUTTON_SPECS.filter((spec) => isAllowed(spec, menu)))
 
     this.#bar.append(...allowedSpecs.map((spec) => this.#createButton(spec, menu)))
+    this.#bar.addEventListener('keydown', (event) => this.#handleBarKeydown(event), { signal })
+    this.#makeFocusable(this.#buttons()[0])
     container.append(this.#bar)
 
     const repositionSoon = () => this.#repositionSoon()
@@ -120,7 +140,7 @@ export class ActionBar {
     quill.root.addEventListener('scroll', repositionSoon, listenerOptions)
     window.addEventListener('scroll', repositionSoon, { ...listenerOptions, capture: true })
     window.addEventListener('resize', repositionSoon, listenerOptions)
-    quill.root.addEventListener('keydown', (event) => this.#dismissOnEscape(event), { signal })
+    quill.root.addEventListener('keydown', (event) => this.#handleEditorKeydown(event), { signal })
     signal.addEventListener('abort', () => {
       cancelAnimationFrame(this.#frameId)
       this.#bar.remove()
@@ -136,7 +156,9 @@ export class ActionBar {
     const tableBlot = startLine && tableOf(startLine)
 
     if (!range || !startLine || !tableBlot) {
-      if (!range && this.#handlers.isAnythingOpen()) return
+      const keepsFocus = this.#handlers.isAnythingOpen() || this.#bar.contains(document.activeElement)
+
+      if (!range && keepsFocus) return
 
       this.hide()
       return
@@ -166,11 +188,53 @@ export class ActionBar {
     this.#bar.style.display = 'none'
   }
 
-  #dismissOnEscape(event: KeyboardEvent): void {
-    if (event.key !== 'Escape' || event.defaultPrevented || this.#bar.style.display !== 'flex') return
+  focus(): void {
+    const focusableButton = this.#buttons().find((button) => button.tabIndex === 0) ?? this.#buttons()[0]
 
-    this.#dismissedCell = this.#activeCell
-    this.hide()
+    focusableButton?.focus()
+  }
+
+  #handleEditorKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || this.#bar.style.display !== 'flex') return
+
+    if (event.key === 'F10' && event.altKey) {
+      event.preventDefault()
+      this.focus()
+    } else if (event.key === 'Escape') {
+      this.#dismissedCell = this.#activeCell
+      this.hide()
+    }
+  }
+
+  #handleBarKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      this.#quill.focus()
+      return
+    }
+
+    const nextPosition = NEXT_BUTTON_KEYS[event.key]
+    const buttons = this.#buttons()
+    const focusedPosition = buttons.indexOf(document.activeElement as HTMLButtonElement)
+
+    if (!nextPosition || focusedPosition < 0) return
+
+    event.preventDefault()
+
+    const nextButton = buttons[nextPosition(focusedPosition, buttons.length)]
+
+    this.#makeFocusable(nextButton)
+    nextButton.focus()
+  }
+
+  #buttons(): HTMLButtonElement[] {
+    return [...this.#bar.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
+  }
+
+  #makeFocusable(focusableButton: HTMLButtonElement | undefined): void {
+    for (const button of this.#bar.querySelectorAll('button')) button.tabIndex = button === focusableButton ? 0 : -1
   }
 
   #createButton(spec: ButtonSpec, menu: TableMenuItemName[]): HTMLElement {
@@ -183,13 +247,17 @@ export class ActionBar {
     if (spec.kind === 'items') {
       const visibleItems = spec.items.filter((item) => menu.includes(item))
 
-      this.#describe(button, this.#labels[spec.label], `${spec.icon}${ICONS.chevron}`)
+      this.#describe(button, this.#labels[spec.label], `${this.#icons[spec.icon]}${this.#icons.chevron}`)
       button.setAttribute('aria-haspopup', 'menu')
-      button.addEventListener('click', () => this.#toggle(button, () => this.#handlers.openItems(visibleItems, button)))
+      button.addEventListener('click', (event) =>
+        this.#toggle(button, event, () => this.#handlers.openItems(visibleItems, button)),
+      )
     } else if (spec.kind === 'item') {
-      this.#describe(button, this.#labels[spec.item], spec.icon)
+      this.#describe(button, this.#labels[spec.item], this.#icons[spec.icon])
       button.classList.toggle('is-danger', spec.danger === true)
-      button.addEventListener('click', () => this.#toggle(button, () => this.#handlers.runItem(spec.item, button)))
+      button.addEventListener('click', (event) =>
+        this.#toggle(button, event, () => this.#handlers.runItem(spec.item, button)),
+      )
 
       if (spec.item === 'headerRow') {
         this.#headerButton = button
@@ -213,9 +281,17 @@ export class ActionBar {
     button.dataset.tooltip = label
   }
 
-  #toggle(button: HTMLButtonElement, open: () => void): void {
-    if (this.#handlers.isOpenFrom(button)) this.#handlers.closeAll()
-    else open()
+  #toggle(button: HTMLButtonElement, event: MouseEvent, open: () => void): void {
+    if (this.#handlers.isOpenFrom(button)) {
+      this.#handlers.closeAll()
+      return
+    }
+
+    open()
+
+    const isKeyboardClick = event.detail === 0
+
+    if (isKeyboardClick && this.#handlers.isOpenFrom(button)) this.#handlers.focusOpened()
   }
 
   #showMergeState(spansSeveralCells: boolean, isMergedCell: boolean): void {
@@ -231,11 +307,13 @@ export class ActionBar {
       this.#describe(
         button,
         showsSplit ? this.#labels.splitCell : this.#labels.mergeCells,
-        showsSplit ? ICONS.split : ICONS.merge,
+        showsSplit ? this.#icons.split : this.#icons.merge,
       )
     }
 
     button.disabled = !spansSeveralCells && !isMergedCell
+
+    if (button.disabled && button.tabIndex === 0) this.#makeFocusable(this.#buttons()[0])
   }
 
   #activeRowBox(): { top: number; bottom: number } | null {
@@ -246,8 +324,10 @@ export class ActionBar {
 
     const cellBox = cellElement.getBoundingClientRect()
     const rowBox = rowElement.getBoundingClientRect()
+    const isFirstRow = rowElement.previousElementSibling == null
+    const captionTop = isFirstRow && this.#tableElement ? this.#tableElement.getBoundingClientRect().top : Infinity
 
-    return { top: Math.min(cellBox.top, rowBox.top), bottom: Math.max(cellBox.bottom, rowBox.bottom) }
+    return { top: Math.min(cellBox.top, rowBox.top, captionTop), bottom: Math.max(cellBox.bottom, rowBox.bottom) }
   }
 
   #repositionSoon(): void {
@@ -272,20 +352,23 @@ export class ActionBar {
     const clipsOverflow = getComputedStyle(this.#container).overflowY !== 'visible'
     const visibleTop = Math.max(containerBox.top, 0)
     const visibleBottom = Math.min(clipsOverflow ? containerBox.bottom : Infinity, window.innerHeight)
-    const { offsetWidth: barWidth, offsetHeight: barHeight } = this.#bar
+    const scale = scaleOf(this.#container)
+    const barWidth = this.#bar.offsetWidth * scale
+    const barHeight = this.#bar.offsetHeight * scale
+    const gap = GAP * scale
     const isTableVisible = tableBox.bottom > visibleTop && tableBox.top < visibleBottom
 
     this.#bar.style.visibility = isTableVisible ? '' : 'hidden'
 
     const fits = (top: number) => fitsOnScreen(top, barHeight, visibleTop, visibleBottom)
     const rowBox = this.#activeRowBox() ?? tableBox
-    const aboveRow = rowBox.top - barHeight - GAP
-    const belowRow = rowBox.bottom + GAP
-    const nearestEdgeTop = rowBox.top >= visibleBottom ? visibleBottom - barHeight - GAP : visibleTop + GAP
+    const aboveRow = rowBox.top - barHeight - gap
+    const belowRow = rowBox.bottom + gap
+    const nearestEdgeTop = rowBox.top >= visibleBottom ? visibleBottom - barHeight - gap : visibleTop + gap
     const clientTop = [aboveRow, belowRow].find(fits) ?? nearestEdgeTop
     const cellLeft = this.#activeCell?.isConnected ? this.#activeCell.getBoundingClientRect().left : tableBox.left
-    const maxLeft = containerBox.left + this.#container.clientWidth - barWidth - GAP
-    const clientLeft = Math.max(containerBox.left + GAP, Math.min(cellLeft, maxLeft))
+    const maxLeft = containerBox.left + this.#container.clientWidth * scale - barWidth - gap
+    const clientLeft = Math.max(containerBox.left + gap, Math.min(cellLeft, maxLeft))
     const { left, top } = toContainerPosition(this.#container, clientLeft, clientTop)
     const hasMoved = this.#bar.style.left !== `${left}px` || this.#bar.style.top !== `${top}px`
 

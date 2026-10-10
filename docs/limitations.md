@@ -9,6 +9,8 @@
 - Other Delta-to-HTML libraries don't understand the table format. Use `quill.getSemanticHTML()` instead (see [Saved content](./content.md#html)).
 - Border color is for the whole table, not single cells. With `border-collapse`, two cells next to each other share one border, and the browser only draws one of their colors. A colored border on one cell would show on two sides and not the other two.
 - Table alignment (left, center, right) only does something when the table is narrower than the editor. A new table is full width until you resize a column.
-- Copying a table from another site brings the header row, cell backgrounds and alignment along, but not its border color.
+- Copying a table from another site brings the header row, cell backgrounds, alignment, a caption and a missing or dashed border along, but not its border color. Stripes are recognized by their pattern: every other row has the same background and the rows between don't. That needs at least two colored rows, except for this module's default stripe color. A table where you colored every other row by hand comes back as a striped table, which looks the same.
+- The caption is plain text, no bold or links. In the editor you change it in Table properties, not by typing above the table.
+- In the saved HTML, striped rows without their own stripe color use `#f6f8fa`, even if you changed `--qlt-stripe-bg` for the editor. Pick the color in Table properties if it should be in the saved HTML too.
 - **Copy table** needs the browser's Clipboard API for the best result, which only works on `https://` pages and `localhost`. Elsewhere it falls back to the older copy command, and if the browser blocks that too, `copyTable()` returns `false`.
 - Pasting a table into a table doesn't merge cells in the target, even if they were merged in the copy.

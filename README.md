@@ -27,6 +27,7 @@ Pairs well with [`resize-quill-image`](https://www.npmjs.com/package/resize-quil
   - [The action bar](#the-action-bar)
   - [The table menu](#the-table-menu)
   - [Merging cells](#merging-cells)
+  - [Moving and duplicating](#moving-and-duplicating)
   - [Copy and paste](#copy-and-paste)
   - [Header row](#header-row)
   - [Cell and table properties](#cell-and-table-properties)
@@ -36,6 +37,7 @@ Pairs well with [`resize-quill-image`](https://www.npmjs.com/package/resize-quil
   - [Option Descriptions](#option-descriptions)
   - [Menu items](#menu-items)
   - [Labels](#labels)
+  - [Icons](#icons)
   - [Colors](#colors)
 - [Saving and showing content](#saving-and-showing-content)
 - [Using it with image modules](#using-it-with-image-modules)
@@ -158,13 +160,17 @@ While the cursor is in a table, a small bar shows up next to it with buttons for
 
 The bar follows the cell you click: it sits just above that cell's row (or just below it at the top of the editor), so it never covers what you're editing. Escape hides it until you click into another cell. Set `actionBar: false` to turn it off.
 
+It works from the keyboard too: **Alt+F10** jumps to the bar, the arrow keys move between buttons, Enter opens one, and Escape takes you back to the text.
+
 ### [The table menu](#the-table-menu)
 
 Click the table button in the toolbar while the cursor is in a table to get every action in one list:
 
 - Insert row above / below
 - Insert column left / right
+- Move row up / down, move column left / right, duplicate row / column
 - Insert paragraph above / below the table
+- Equal column widths, Fit table to width
 - Select row / column, Copy table
 - Merge cells / Split cell
 - Header row
@@ -175,11 +181,19 @@ Every action can be undone with a single undo. If a table is the first thing in 
 
 ### [Merging cells](#merging-cells)
 
+The cell with the cursor has a blue outline, so you always see where you're typing.
+
 Select across cells by dragging, or click in one cell and **Shift+click** in another. The cells that will be merged get a blue highlight. Then pick **Merge cells**. Nothing gets lost: the text of every cell ends up in the merged cell.
 
 **Split cell** undoes it. The text stays in the top-left cell and the others are empty.
 
 **Select row** and **Select column** select every cell in the row or column, so you can merge or delete them in one go.
+
+### [Moving and duplicating](#moving-and-duplicating)
+
+**Move row up / down** and **Move column left / right** swap a row or column with its neighbour. The cursor stays in your cell, so you can keep moving it. Rows covered by the same merged cell move together.
+
+**Duplicate row** adds a copy right below, **Duplicate column** adds one on the right, with the text, colors and merged cells.
 
 ### [Copy and paste](#copy-and-paste)
 
@@ -195,7 +209,7 @@ Select across cells by dragging, or click in one cell and **Shift+click** in ano
 
 **Cell properties** opens a small panel for the selected cells: background color, vertical alignment (top, middle, bottom) and text alignment (left, center, right, justify).
 
-**Table properties** works on the whole table: its alignment on the page, the border color, and a background for every cell.
+**Table properties** works on the whole table: its alignment on the page, the borders (solid, dashed or none), the border color, the space inside the cells (compact, normal, wide), striped rows in any color, a background for every cell, and a caption above the table. Colors show as small buttons that open the palette, so the panel stays short. The caption is saved as a real `<caption>`, so screen readers announce it.
 
 Under each set of colors you can pick any other color with the color picker, or type one in (`#1f6feb`, `rgb(...)`, `teal`) and press Enter.
 
@@ -209,12 +223,16 @@ Every click changes the table right away, and the panel stays open so you can ch
 
 While you drag, only a guide line or a dashed outline moves, and the table changes when you let go. A table can't be dragged wider than the editor: the guide turns red when you reach that point. Widths and heights are saved in the Delta, and each drag is one undo step.
 
+After some dragging, **Equal column widths** makes all columns the same width and **Fit table to width** makes the table exactly as wide as the editor. Resizing also works in an editor zoomed with CSS `transform: scale()`.
+
 ### [Keyboard](#keyboard)
 
 | Key                    | Behavior                                                                                   |
 | ---------------------- | ------------------------------------------------------------------------------------------ |
 | `Tab`                  | Goes to the next cell and selects its text. In the last cell it adds a row.                |
 | `Shift + Tab`          | Goes to the previous cell.                                                                 |
+| `Up` / `Down`          | Goes to the cell above or below, after moving through the lines of the current cell.       |
+| `Alt + F10`            | Moves the focus to the action bar.                                                         |
 | `Enter`                | Makes a new line inside the same cell.                                                     |
 | `Backspace` / `Delete` | Never joins two cells. With several cells selected, clears their text but keeps the table. |
 
@@ -236,6 +254,7 @@ tableKit: {
   minColumnWidth: 40,
   menu: ['insertRowBelow', 'insertColumnRight', 'mergeCells', 'splitCell', 'deleteTable'],
   colors: ['#ffffff', '#fff2cc', '#d9ead3', '#cfe2f3'],
+  icons: {},
 }
 ```
 
@@ -253,13 +272,14 @@ tableKit: {
 | `minColumnWidth` | `number`  | `40`       | Narrowest a column can be dragged, in px.                                 |
 | `menu`           | `array`   | every item | Which items the table menu shows. See [Menu items](#menu-items).          |
 | `colors`         | `array`   | 15 colors  | The colors in the properties panel. Any CSS color works.                  |
+| `icons`          | `object`  | built in   | Your own icons for the action bar. See [Icons](#icons).                   |
 | `labels`         | `object`  | English    | The text in the picker, the menu and the panel. See [Labels](#labels).    |
 
 ### [Menu items](#menu-items)
 
 Pass the items you want, and the rest are hidden. They always show in the same order:
 
-`insertRowAbove` · `insertRowBelow` · `insertColumnLeft` · `insertColumnRight` · `insertParagraphAbove` · `insertParagraphBelow` · `selectRow` · `selectColumn` · `copyTable` · `mergeCells` · `splitCell` · `headerRow` · `cellProperties` · `tableProperties` · `deleteRow` · `deleteColumn` · `deleteTable`
+`insertRowAbove` · `insertRowBelow` · `insertColumnLeft` · `insertColumnRight` · `moveRowUp` · `moveRowDown` · `moveColumnLeft` · `moveColumnRight` · `duplicateRow` · `duplicateColumn` · `insertParagraphAbove` · `insertParagraphBelow` · `equalColumnWidths` · `fitToWidth` · `selectRow` · `selectColumn` · `copyTable` · `mergeCells` · `splitCell` · `headerRow` · `cellProperties` · `tableProperties` · `deleteRow` · `deleteColumn` · `deleteTable`
 
 ### [Labels](#labels)
 
@@ -275,18 +295,35 @@ tableKit: {
 }
 ```
 
-Each menu item above has a label with the same name. The picker, the panel and the action bar have a few more: `insertTable`, `customSize`, `rowsInput`, `columnsInput`, `insertButton`, `background`, `borderColor`, `noColor`, `customColor`, `colorCode`, `textAlign`, `verticalAlign`, `tableAlign`, `alignLeft`, `alignCenter`, `alignRight`, `alignJustify`, `alignTop`, `alignMiddle`, `alignBottom`, `actionBar`, `rowsGroup`, `columnsGroup` and `moreGroup`. The full list with the default texts is in [Options](https://github.com/littlenines/quill-tablekit/blob/master/docs/options.md#labels).
+Each menu item above has a label with the same name. The picker, the panel and the action bar have a few more: `insertTable`, `customSize`, `rowsInput`, `columnsInput`, `insertButton`, `background`, `borderColor`, `borderStyle`, `borderSolid`, `borderDashed`, `borderNone`, `cellPadding`, `paddingCompact`, `paddingNormal`, `paddingWide`, `stripedRows`, `stripeColor`, `defaultColor`, `caption`, `noColor`, `customColor`, `colorCode`, `textAlign`, `verticalAlign`, `tableAlign`, `alignLeft`, `alignCenter`, `alignRight`, `alignJustify`, `alignTop`, `alignMiddle`, `alignBottom`, `actionBar`, `rowsGroup`, `columnsGroup` and `moreGroup`. The full list with the default texts is in [Options](https://github.com/littlenines/quill-tablekit/blob/master/docs/options.md#labels).
+
+### [Icons](#icons)
+
+The action bar has its own small icons. Swap any of them for your own SVG or icon-font markup:
+
+```js
+tableKit: {
+  icons: {
+    rows: '<svg viewBox="0 0 24 24" width="16" height="16">...</svg>',
+    deleteTable: '<i class="icon-trash"></i>',
+  },
+}
+```
+
+The names are `rows`, `columns`, `merge`, `split`, `headerRow`, `cellProperties`, `tableProperties`, `more`, `deleteTable`, `chevron`, and `insertTable` for the toolbar button. The markup is used as it is, so only pass icons you trust.
 
 ### [Colors](#colors)
 
-The module's own colors come from four CSS variables. Set them on the editor container:
+The module's own colors come from CSS variables. Set them on the editor container:
 
 ```css
 .ql-container {
   --qlt-accent: #7c3aed; /* outline of selected cells, resize line, buttons */
   --qlt-selection-bg: rgba(124, 58, 237, 0.12); /* background of selected cells */
+  --qlt-active-cell-bg: rgba(124, 58, 237, 0.05); /* background of the cell with the cursor */
   --qlt-border: #d4d4d8; /* cell borders */
   --qlt-header-bg: #ede9fe; /* background of the header row */
+  --qlt-stripe-bg: #faf5ff; /* every other row in a striped table */
 }
 ```
 
@@ -348,6 +385,7 @@ const tableKit = quill.getModule('tableKit')
 tableKit.insertTable(3, 4)
 tableKit.mergeCells()
 tableKit.setTableProperties({ header: true, borderColor: '#6fa8dc' })
+tableKit.setTableProperties({ striped: true, stripeColor: '#e8f0fe', caption: 'Sales by region' })
 tableKit.setCellProperties({ background: '#fff2cc', verticalAlign: 'middle' })
 
 quill.on('selection-change', () => {
@@ -355,22 +393,26 @@ quill.on('selection-change', () => {
 })
 ```
 
-| Method                                                | What it does                                                                          |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `insertTable(rows, columns)`                          | Adds a table at the cursor.                                                           |
-| `insertRowAbove()`, `insertRowBelow()`                | Adds a row.                                                                           |
-| `insertColumnLeft()`, `insertColumnRight()`           | Adds a column.                                                                        |
-| `insertParagraphAbove()`, `insertParagraphBelow()`    | Adds an empty line before or after the table.                                         |
-| `selectRow()`, `selectColumn()`                       | Selects the whole row or column.                                                      |
-| `copyTable()`                                         | Copies the whole table to the clipboard.                                              |
-| `deleteRow()`, `deleteColumn()`, `deleteTable()`      | Removes the selected rows, columns or the table.                                      |
-| `mergeCells()`, `splitCell()`                         | Merges the selected cells, or splits a merged one.                                    |
-| `canMergeCells()`, `canSplitCell()`, `isInTable()`    | Tells you what's possible right now.                                                  |
-| `getCellProperties()`, `setCellProperties(changes)`   | Reads or changes background, vertical and text alignment of the selected cells.       |
-| `getTableProperties()`, `setTableProperties(changes)` | Reads or changes the header row, alignment, border color and background of the table. |
-| `setColumnWidths(table, widths)`                      | Sets the column widths in px, or `null` for automatic.                                |
-| `setRowHeights(table, heights)`                       | Sets the row heights in px, or `null` for automatic.                                  |
-| `destroy()`                                           | Cleans up. See [Cleanup / Destroy](#cleanup--destroy).                                |
+| Method                                                | What it does                                                                                                |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `insertTable(rows, columns)`                          | Adds a table at the cursor.                                                                                 |
+| `insertRowAbove()`, `insertRowBelow()`                | Adds a row.                                                                                                 |
+| `insertColumnLeft()`, `insertColumnRight()`           | Adds a column.                                                                                              |
+| `moveRowUp()`, `moveRowDown()`                        | Swaps the row with its neighbour.                                                                           |
+| `moveColumnLeft()`, `moveColumnRight()`               | Swaps the column with its neighbour.                                                                        |
+| `duplicateRow()`, `duplicateColumn()`                 | Adds a copy of the row or column.                                                                           |
+| `insertParagraphAbove()`, `insertParagraphBelow()`    | Adds an empty line before or after the table.                                                               |
+| `selectRow()`, `selectColumn()`                       | Selects the whole row or column.                                                                            |
+| `copyTable()`                                         | Copies the whole table to the clipboard.                                                                    |
+| `deleteRow()`, `deleteColumn()`, `deleteTable()`      | Removes the selected rows, columns or the table.                                                            |
+| `mergeCells()`, `splitCell()`                         | Merges the selected cells, or splits a merged one.                                                          |
+| `canMergeCells()`, `canSplitCell()`, `isInTable()`    | Tells you what's possible right now.                                                                        |
+| `getCellProperties()`, `setCellProperties(changes)`   | Reads or changes background, vertical and text alignment of the selected cells.                             |
+| `getTableProperties()`, `setTableProperties(changes)` | Reads or changes the header row, alignment, borders, spacing, stripes, background and caption of the table. |
+| `setColumnWidths(table, widths)`                      | Sets the column widths in px, or `null` for automatic.                                                      |
+| `setRowHeights(table, heights)`                       | Sets the row heights in px, or `null` for automatic.                                                        |
+| `equalizeColumnWidths()`, `fitTableToWidth()`         | Makes the columns equal, or the table as wide as the editor.                                                |
+| `destroy()`                                           | Cleans up. See [Cleanup / Destroy](#cleanup--destroy).                                                      |
 
 The full list is in [API](https://github.com/littlenines/quill-tablekit/blob/master/docs/api.md).
 

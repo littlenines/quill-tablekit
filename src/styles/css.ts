@@ -1,4 +1,4 @@
-import { HEADER_BACKGROUND } from '../config/constants'
+import { BORDER_COLOR, CELL_PADDING_STYLES, HEADER_BACKGROUND, STRIPE_BACKGROUND } from '../config/constants'
 
 export const CSS = `
 .ql-editor table.qlt-table {
@@ -13,10 +13,40 @@ export const CSS = `
 }
 
 .ql-editor table.qlt-table td.qlt-cell {
-  border: 1px solid var(--qlt-border, #c8ccd1);
-  padding: 4px 8px;
+  border: 1px solid var(--qlt-border, ${BORDER_COLOR});
+  padding: ${CELL_PADDING_STYLES.normal};
   vertical-align: top;
   overflow-wrap: anywhere;
+}
+
+.ql-editor table.qlt-table[data-border-style='dashed'] td.qlt-cell {
+  border-style: dashed;
+}
+
+.ql-editor table.qlt-table[data-border-style='none'] td.qlt-cell {
+  border: 1px dashed var(--qlt-guide, rgba(0, 0, 0, 0.12));
+}
+
+.ql-editor table.qlt-table[data-cell-padding='compact'] td.qlt-cell {
+  padding: ${CELL_PADDING_STYLES.compact};
+}
+
+.ql-editor table.qlt-table[data-cell-padding='wide'] td.qlt-cell {
+  padding: ${CELL_PADDING_STYLES.wide};
+}
+
+.ql-editor table.qlt-table[data-striped]:not([data-header]) > tbody > tr:nth-child(even) > td.qlt-cell,
+.ql-editor table.qlt-table[data-striped][data-header] > tbody > tr:nth-child(odd):not(:first-child) > td.qlt-cell {
+  background-color: var(--qlt-table-stripe, var(--qlt-stripe-bg, ${STRIPE_BACKGROUND}));
+}
+
+.ql-editor table.qlt-table[data-caption]::before {
+  content: attr(data-caption);
+  display: table-caption;
+  caption-side: top;
+  padding: 4px 0;
+  text-align: center;
+  color: #555;
 }
 
 .ql-editor table.qlt-table[data-header] > tbody > tr:first-child > td.qlt-cell {
@@ -34,6 +64,17 @@ export const CSS = `
   display: none;
   pointer-events: none;
   background: var(--qlt-selection-bg, rgba(35, 131, 226, 0.14));
+  outline: 2px solid var(--qlt-accent, #2383e2);
+  outline-offset: -1px;
+}
+
+.qlt-active-cell {
+  position: absolute;
+  z-index: 4;
+  display: none;
+  box-sizing: border-box;
+  pointer-events: none;
+  background: var(--qlt-active-cell-bg, rgba(35, 131, 226, 0.06));
   outline: 2px solid var(--qlt-accent, #2383e2);
   outline-offset: -1px;
 }
@@ -91,7 +132,7 @@ body.qlt-resizing {
 
 .qlt-table-handle {
   position: absolute;
-  z-index: 7;
+  z-index: 21;
   display: none;
   box-sizing: border-box;
   width: 12px;
@@ -314,7 +355,8 @@ body.qlt-resizing-past-limit * {
   outline-offset: 1px;
 }
 
-.qlt-action-button[data-tooltip]:hover::after {
+.qlt-action-button[data-tooltip]:hover::after,
+.qlt-action-button[data-tooltip]:focus-visible::after {
   content: attr(data-tooltip);
   position: absolute;
   top: calc(100% + 6px);
@@ -402,6 +444,69 @@ body.qlt-resizing-past-limit * {
   color: #555;
 }
 
+.qlt-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qlt-field-row > .qlt-field-label {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.qlt-field-row > .qlt-choices,
+.qlt-field-row > .qlt-toggle {
+  flex: 1;
+  min-width: 0;
+}
+
+.qlt-color-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  padding: 0 4px 0 5px;
+  color: #555;
+  background: #fff;
+  border: 1px solid #c8ccd1;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.qlt-color-button:hover {
+  background: #f0f2f4;
+}
+
+.qlt-color-button[aria-expanded='true'] {
+  border-color: var(--qlt-accent, #2383e2);
+}
+
+.qlt-color-button:focus-visible {
+  outline: 2px solid var(--qlt-accent, #2383e2);
+  outline-offset: 1px;
+}
+
+.qlt-color-preview {
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.qlt-palette {
+  margin-top: 6px;
+  padding: 8px;
+  background: #f6f7f9;
+  border-radius: 6px;
+}
+
+.qlt-palette[hidden] {
+  display: none;
+}
+
 .qlt-colors {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
@@ -486,6 +591,33 @@ body.qlt-resizing-past-limit * {
 
 .qlt-color-code[aria-invalid='true']:focus-visible {
   outline-color: #d93025;
+}
+
+.qlt-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.qlt-toggle input {
+  margin: 0;
+  accent-color: var(--qlt-accent, #2383e2);
+}
+
+.qlt-text-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 4px 6px;
+  font: inherit;
+  border: 1px solid #c8ccd1;
+  border-radius: 4px;
+}
+
+.qlt-text-input:focus-visible,
+.qlt-toggle input:focus-visible {
+  outline: 2px solid var(--qlt-accent, #2383e2);
+  outline-offset: 1px;
 }
 
 .qlt-choices {

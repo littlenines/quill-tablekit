@@ -17,4 +17,8 @@ export const CLASS_NAMES = {
 } as const
 
 export const HEADER_BACKGROUND = '#f3f4f6'
+export const BORDER_COLOR = '#c8ccd1'
 export const MIN_ROW_HEIGHT = 20
+export const STRIPE_BACKGROUND = '#f6f8fa'
+
+export const CELL_PADDING_STYLES = { compact: '2px 6px', normal: '4px 8px', wide: '8px 12px' } as const

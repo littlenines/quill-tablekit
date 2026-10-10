@@ -4,6 +4,7 @@ import type Keyboard from 'quill/modules/keyboard'
 import { TableCellLine } from '../blots'
 import { deleteSelectedContent } from './commands'
 import { isInTable, lineAt } from './selection'
+import { moveVertically } from './verticalNavigation'
 
 type KeyBinding = Exclude<Parameters<Keyboard['addBinding']>[0], string | number> & { key: string }
 
@@ -38,6 +39,18 @@ export const installKeyboard = (quill: Quill, moveToCell: (direction: 1 | -1) =>
     shiftKey: true,
     handler: (range) => !(isInTable(quill, range) && moveToCell(-1)),
   })
+
+  for (const [key, direction] of [
+    ['ArrowUp', -1],
+    ['ArrowDown', 1],
+  ] as const) {
+    addPriorityBinding(keyboard, {
+      key,
+      collapsed: true,
+      shiftKey: false,
+      handler: (range) => !moveVertically(quill, range, direction),
+    })
+  }
 
   addPriorityBinding(keyboard, {
     key: 'Backspace',

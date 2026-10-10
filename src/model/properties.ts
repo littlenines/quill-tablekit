@@ -1,6 +1,8 @@
 export type VerticalAlign = 'top' | 'middle' | 'bottom'
 export type TableAlign = 'left' | 'center' | 'right'
 export type TextAlign = 'left' | 'center' | 'right' | 'justify'
+export type BorderStyle = 'solid' | 'dashed' | 'none'
+export type CellPadding = 'compact' | 'normal' | 'wide'
 
 export interface CellStyle {
   background?: string
@@ -17,12 +19,21 @@ export interface TableProperties {
   header: boolean
   align: TableAlign
   borderColor: string | null
+  borderStyle: BorderStyle
+  cellPadding: CellPadding
+  striped: boolean
+  stripeColor: string | null
   background: string | null
+  caption: string
 }
 
 export const VERTICAL_ALIGNS: readonly VerticalAlign[] = ['top', 'middle', 'bottom']
 export const TABLE_ALIGNS: readonly TableAlign[] = ['left', 'center', 'right']
 export const TEXT_ALIGNS: readonly TextAlign[] = ['left', 'center', 'right', 'justify']
+export const BORDER_STYLES: readonly BorderStyle[] = ['solid', 'dashed', 'none']
+export const CELL_PADDINGS: readonly CellPadding[] = ['compact', 'normal', 'wide']
+
+const MAX_CAPTION_LENGTH = 300
 
 const COLOR_PATTERN = /^(#[\da-f]{3,8}|(rgb|hsl)a?\([\d\s.,%+-]+\)|[a-z]+)$/i
 const NOT_A_COLOR = new Set(['transparent', 'inherit', 'initial', 'unset', 'revert', 'currentcolor', 'none'])
@@ -69,6 +80,26 @@ export const normalizeTextAlign = (input: unknown): TextAlign | undefined => {
   const textAlign = oneOf(TEXT_ALIGNS, input)
 
   return textAlign === 'left' ? undefined : textAlign
+}
+
+export const normalizeBorderStyle = (input: unknown): BorderStyle | undefined => {
+  const borderStyle = oneOf(BORDER_STYLES, input)
+
+  return borderStyle === 'solid' ? undefined : borderStyle
+}
+
+export const normalizeCellPadding = (input: unknown): CellPadding | undefined => {
+  const cellPadding = oneOf(CELL_PADDINGS, input)
+
+  return cellPadding === 'normal' ? undefined : cellPadding
+}
+
+export const normalizeCaption = (input: unknown): string | undefined => {
+  if (typeof input !== 'string') return undefined
+
+  const caption = input.replace(/\s+/g, ' ').trim().slice(0, MAX_CAPTION_LENGTH)
+
+  return caption || undefined
 }
 
 type WithoutEmptyValues<Fields> = { [Field in keyof Fields]?: NonNullable<Fields[Field]> }

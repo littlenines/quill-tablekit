@@ -45,6 +45,11 @@ The properties from the panel are stored the same way. They only show up once yo
 | `header`        | table      | `true`      | Header row               |
 | `tableAlign`    | table      | `"center"`  | Table properties         |
 | `borderColor`   | table      | `"#6fa8dc"` | Table properties         |
+| `borderStyle`   | table      | `"dashed"`  | Table properties         |
+| `cellPadding`   | table      | `"compact"` | Table properties         |
+| `striped`       | table      | `true`      | Table properties         |
+| `stripeColor`   | table      | `"#e8f0fe"` | Table properties         |
+| `caption`       | table      | `"Sales"`   | Table properties         |
 | `background`    | cell       | `"#fff2cc"` | Cell or table properties |
 | `verticalAlign` | cell       | `"middle"`  | Cell properties          |
 
@@ -62,7 +67,7 @@ import type { TableCellValue } from 'quill-tablekit'
 
 `quill.getSemanticHTML()` gives you normal HTML you can use outside the editor. Tables come out as a plain `<table>` with `rowspan` and `colspan`, a `<colgroup>` if columns were resized, and simple borders. None of the editor's classes or data attributes are in there.
 
-The properties come along as inline styles: cell backgrounds, vertical alignment, row heights, the border color and the table's alignment. If the table has a header row, its cells are `<th>` instead of `<td>`, bold and with a light gray background. Text alignment inside a table comes out both as Quill's `ql-align-center` class and as an inline `text-align`, so it also works where Quill's CSS isn't loaded, like in emails.
+The properties come along as inline styles: cell backgrounds, vertical alignment, row heights, the border color and style, the cell spacing and the table's alignment. Striped rows come out as a `background-color` on the cells of every other row, in the table's stripe color. If the table has a header row, its cells are `<th scope="col">` instead of `<td>`, bold and with a light gray background. A caption comes out as `<caption>`, the first thing in the table. Text alignment inside a table comes out both as Quill's `ql-align-center` class and as an inline `text-align`, so it also works where Quill's CSS isn't loaded, like in emails.
 
 ```html
 <table style="border-collapse: collapse; table-layout: fixed; width: 100%;">
@@ -77,6 +82,8 @@ The properties come along as inline styles: cell backgrounds, vertical alignment
   </tbody>
 </table>
 ```
+
+When you paste this HTML back into an editor, the table gets all of it back: the header row, the border style, the cell spacing, the stripes and the caption.
 
 Don't use `quill.root.innerHTML` for this. That's the editor's own markup and the table styles for it only work inside the editor, so outside it you get tables with no borders.
 

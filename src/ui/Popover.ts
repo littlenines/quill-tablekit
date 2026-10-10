@@ -6,6 +6,7 @@ export class Popover {
   #container: HTMLElement
   #elementThatDoesNotClose: HTMLElement | null = null
   #documentListeners: AbortController | null = null
+  #clientPosition = { clientX: 0, clientY: 0 }
 
   constructor(container: HTMLElement, className: string) {
     this.#container = container
@@ -30,11 +31,25 @@ export class Popover {
   }
 
   moveTo(clientX: number, clientY: number): void {
+    this.#clientPosition = { clientX, clientY }
+
     const { left, top } = toContainerPosition(this.#container, clientX, clientY)
     const maxLeft = Math.max(0, this.#container.clientWidth - this.element.offsetWidth - 4)
 
     this.element.style.left = `${Math.max(0, Math.min(left, maxLeft))}px`
     this.element.style.top = `${this.#fitInsideClippingContainer(top)}px`
+  }
+
+  focusFirst(): void {
+    this.element.querySelector<HTMLElement>('button:not(:disabled), input')?.focus()
+  }
+
+  refit(): void {
+    if (!this.isOpen) return
+
+    const { clientX, clientY } = this.#clientPosition
+
+    this.moveTo(clientX, clientY)
   }
 
   close(): void {
@@ -70,8 +85,12 @@ export class Popover {
   #closeOnEscape = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape') return
 
+    const hadFocus = this.element.contains(document.activeElement)
+
     event.preventDefault()
     this.close()
+
+    if (hadFocus) this.#elementThatDoesNotClose?.focus()
   }
 }
 

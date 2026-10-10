@@ -1,5 +1,7 @@
 import { MENU_GROUPS, MENU_ITEM_NAMES, type ResolvedTableKitOptions, type TableMenuItemName } from '../config/options'
 import { canMerge, canSplit, type TableContext } from '../editing/context'
+import { canMoveColumns, canMoveRows } from '../model/arrange'
+import { hasEqualColumns } from '../model/widths'
 import type { MenuItem } from './TableMenu'
 
 export type TableMenuActions = Record<TableMenuItemName, () => void>
@@ -10,10 +12,17 @@ export const tableMenuItems = (
   actions: TableMenuActions,
   onlyItems: readonly TableMenuItemName[] = MENU_ITEM_NAMES,
 ): MenuItem[][] => {
+  const { model, selectedArea } = tableContext
   const itemStates: Partial<Record<TableMenuItemName, Partial<MenuItem>>> = {
+    moveRowUp: { enabled: canMoveRows(model, selectedArea, -1) },
+    moveRowDown: { enabled: canMoveRows(model, selectedArea, 1) },
+    moveColumnLeft: { enabled: canMoveColumns(model, selectedArea, -1) },
+    moveColumnRight: { enabled: canMoveColumns(model, selectedArea, 1) },
+    equalColumnWidths: { enabled: !hasEqualColumns(model) },
+    fitToWidth: { enabled: model.columnWidths != null },
     mergeCells: { enabled: canMerge(tableContext) },
     splitCell: { enabled: canSplit(tableContext) },
-    headerRow: { checked: tableContext.model.header },
+    headerRow: { checked: model.header },
   }
 
   const menuGroups = MENU_GROUPS.map((menuGroup) =>

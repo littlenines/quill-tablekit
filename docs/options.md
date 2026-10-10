@@ -17,6 +17,7 @@ new Quill('#editor', {
       minColumnWidth: 40,
       menu: ['insertRowAbove', 'insertRowBelow', 'mergeCells', 'splitCell', 'deleteTable'],
       colors: ['#ffffff', '#fff2cc', '#d9ead3'],
+      icons: {},
       labels: {},
     },
   },
@@ -35,6 +36,7 @@ new Quill('#editor', {
 | `minColumnWidth` | `40`       | Narrowest a column can be dragged, in px.                                             |
 | `menu`           | every item | Which items the table menu shows. See [Menu](#menu).                                  |
 | `colors`         | 15 colors  | The colors in the properties panel. See [Colors](#colors).                            |
+| `icons`          | built in   | Your own icons for the action bar and the table button. See [Icons](#icons).          |
 | `labels`         | English    | The text in the picker, the menu and the panel. See [Labels](#labels).                |
 
 If you pass something that isn't a positive number for the number options, the default is used.
@@ -57,8 +59,16 @@ The order in the menu stays the same no matter what order you list them in. Thes
 | `insertRowBelow`       | Adds a row below.                             |
 | `insertColumnLeft`     | Adds a column on the left.                    |
 | `insertColumnRight`    | Adds a column on the right.                   |
+| `moveRowUp`            | Swaps the row with the one above.             |
+| `moveRowDown`          | Swaps the row with the one below.             |
+| `moveColumnLeft`       | Swaps the column with the one on the left.    |
+| `moveColumnRight`      | Swaps the column with the one on the right.   |
+| `duplicateRow`         | Adds a copy of the row below it.              |
+| `duplicateColumn`      | Adds a copy of the column on its right.       |
 | `insertParagraphAbove` | Adds an empty line before the table.          |
 | `insertParagraphBelow` | Adds an empty line after the table.           |
+| `equalColumnWidths`    | Makes every column the same width.            |
+| `fitToWidth`           | Makes the table as wide as the editor.        |
 | `selectRow`            | Selects the whole row.                        |
 | `selectColumn`         | Selects the whole column.                     |
 | `copyTable`            | Copies the whole table to the clipboard.      |
@@ -73,6 +83,8 @@ The order in the menu stays the same no matter what order you list them in. Thes
 
 The action bar follows the same list: a button only shows if at least one of its items is in it.
 
+If you listed your items before a version added new ones, you won't see the new ones until you add them to your list.
+
 With an empty list there's no table menu and no action bar at all, and the table button does nothing while the cursor is in a table. You can still call every action from your own code, see [API](./api.md).
 
 ## Colors
@@ -86,6 +98,36 @@ tableKit: {
 ```
 
 The panel puts 8 colors in a row, so 7 or 15 colors (plus "no color") fill whole rows.
+
+## Icons
+
+The action bar uses its own small SVG icons. You can swap any of them for your own markup, for example from an icon set you already use. Only pass the ones you want to change:
+
+```js
+tableKit: {
+  icons: {
+    rows: '<svg viewBox="0 0 24 24" width="16" height="16">...</svg>',
+    deleteTable: '<i class="icon-trash"></i>',
+    insertTable: '<svg>...</svg>',
+  },
+}
+```
+
+| Key               | Where it's used                                                                 |
+| ----------------- | ------------------------------------------------------------------------------- |
+| `rows`            | Rows button                                                                     |
+| `columns`         | Columns button                                                                  |
+| `merge`           | Merge cells button                                                              |
+| `split`           | The same button when the cursor is in a merged cell                             |
+| `headerRow`       | Header row button                                                               |
+| `cellProperties`  | Cell properties button                                                          |
+| `tableProperties` | Table properties button                                                         |
+| `more`            | More button                                                                     |
+| `deleteTable`     | Delete table button                                                             |
+| `chevron`         | The small arrow on buttons that open a menu                                     |
+| `insertTable`     | The table button in the Quill toolbar. Empty by default, which uses Quill's own |
+
+The markup goes into the page as it is, so only use icons you wrote or trust, never text from your users.
 
 ## Labels
 
@@ -112,6 +154,14 @@ tableKit: {
 | `insertRowBelow`       | Insert row below             |
 | `insertColumnLeft`     | Insert column left           |
 | `insertColumnRight`    | Insert column right          |
+| `moveRowUp`            | Move row up                  |
+| `moveRowDown`          | Move row down                |
+| `moveColumnLeft`       | Move column left             |
+| `moveColumnRight`      | Move column right            |
+| `duplicateRow`         | Duplicate row                |
+| `duplicateColumn`      | Duplicate column             |
+| `equalColumnWidths`    | Equal column widths          |
+| `fitToWidth`           | Fit table to width           |
 | `insertParagraphAbove` | Insert paragraph above table |
 | `insertParagraphBelow` | Insert paragraph below table |
 | `selectRow`            | Select row                   |
@@ -127,6 +177,18 @@ tableKit: {
 | `deleteTable`          | Delete table                 |
 | `background`           | Background                   |
 | `borderColor`          | Border color                 |
+| `borderStyle`          | Borders                      |
+| `borderSolid`          | Solid                        |
+| `borderDashed`         | Dashed                       |
+| `borderNone`           | None                         |
+| `cellPadding`          | Cell spacing                 |
+| `paddingCompact`       | Compact                      |
+| `paddingNormal`        | Normal                       |
+| `paddingWide`          | Wide                         |
+| `stripedRows`          | Striped rows                 |
+| `stripeColor`          | Stripe color                 |
+| `defaultColor`         | Default                      |
+| `caption`              | Caption                      |
 | `noColor`              | No color                     |
 | `customColor`          | Custom color                 |
 | `colorCode`            | Color code                   |
@@ -147,18 +209,23 @@ tableKit: {
 
 ## Colors and styles
 
-The module's own colors come from four CSS variables. Set them on the editor container:
+The module's own colors come from CSS variables. Set them on the editor container:
 
 ```css
 .ql-container {
   --qlt-accent: #7c3aed; /* outline of selected cells, resize line, buttons */
   --qlt-selection-bg: rgba(124, 58, 237, 0.12); /* background of selected cells */
+  --qlt-active-cell-bg: rgba(124, 58, 237, 0.05); /* background of the cell with the cursor */
   --qlt-border: #d4d4d8; /* cell borders */
   --qlt-header-bg: #ede9fe; /* background of the header row */
+  --qlt-stripe-bg: #faf5ff; /* every other row in a striped table */
+  --qlt-guide: rgba(0, 0, 0, 0.12); /* the faint lines of a table without borders */
 }
 ```
 
-A border color picked in Table properties wins over `--qlt-border` for that table, and a cell background wins over `--qlt-header-bg`.
+A border or stripe color picked in Table properties wins over `--qlt-border` and `--qlt-stripe-bg` for that table, and a cell background wins over `--qlt-header-bg` and the stripes.
+
+A table without borders still shows faint dashed lines in the editor, so you can see the cells while you type. They aren't in the saved HTML. Without a stripe color picked for the table, the saved HTML uses `#f6f8fa`, since the variable only exists in the editor.
 
 If you want to style more than that, these are the class names:
 
@@ -171,16 +238,25 @@ If you want to style more than that, these are the class names:
 | `qlt-menu`         | The table menu                                |
 | `qlt-properties`   | The cell and table properties panel           |
 | `qlt-selection`    | The highlight over selected cells             |
+| `qlt-active-cell`  | The outline around the cell with the cursor   |
 | `qlt-col-handle`   | The line you drag to resize a column          |
 | `qlt-row-handle`   | The line you drag to resize a row             |
 | `qlt-table-handle` | The round handle you drag to resize the table |
 
-A table with a header row has a `data-header` attribute, so `.qlt-table[data-header] tr:first-child td` is the header.
+If you don't want the outline around the cell with the cursor, hide it:
+
+```css
+.qlt-active-cell {
+  display: none !important;
+}
+```
+
+In the editor, a table has data attributes for its style: `data-header`, `data-striped`, `data-border-style`, `data-cell-padding` and `data-caption`. So `.qlt-table[data-header] tr:first-child td` is the header row. The saved HTML doesn't have these attributes.
 
 ## TypeScript
 
 ```ts
-import type { TableKitOptions, TableKitLabels, TableMenuItemName } from 'quill-tablekit'
+import type { TableKitOptions, TableKitLabels, TableKitIcons, TableMenuItemName } from 'quill-tablekit'
 
 const menu: TableMenuItemName[] = ['mergeCells', 'splitCell']
 const options: TableKitOptions = { pickerRows: 6, maxColumns: 12, menu }

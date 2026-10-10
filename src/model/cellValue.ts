@@ -1,8 +1,13 @@
 import {
+  normalizeBorderStyle,
+  normalizeCaption,
+  normalizeCellPadding,
   normalizeColor,
   normalizeTableAlign,
   normalizeVerticalAlign,
   withoutEmptyValues,
+  type BorderStyle,
+  type CellPadding,
   type TableAlign,
   type VerticalAlign,
 } from './properties'
@@ -18,6 +23,11 @@ export interface TableCellValue {
   header?: boolean
   tableAlign?: TableAlign
   borderColor?: string
+  borderStyle?: BorderStyle
+  cellPadding?: CellPadding
+  striped?: boolean
+  stripeColor?: string
+  caption?: string
   background?: string
   verticalAlign?: VerticalAlign
 }
@@ -33,6 +43,11 @@ export const CELL_DATA_ATTRIBUTES = [
   'data-header',
   'data-table-align',
   'data-border-color',
+  'data-border-style',
+  'data-cell-padding',
+  'data-striped',
+  'data-stripe-color',
+  'data-caption',
   'data-background',
   'data-vertical-align',
 ]
@@ -74,6 +89,8 @@ export const parseWidths = (widthsInput: unknown): number[] | undefined => {
   return widths.map(Math.round)
 }
 
+const isTrue = (flag: unknown) => flag === true || flag === 'true'
+
 export const parseRowHeight = (heightInput: unknown): number | undefined => {
   const height = typeof heightInput === 'string' ? Number.parseFloat(heightInput) : heightInput
 
@@ -99,9 +116,14 @@ export const normalizeCellValue = (cellValueInput: unknown): TableCellValue | nu
     ...withoutEmptyValues({
       widths: parseWidths(fields.widths),
       rowHeight: parseRowHeight(fields.rowHeight),
-      header: fields.header === true || fields.header === 'true' ? true : undefined,
+      header: isTrue(fields.header) || undefined,
       tableAlign: normalizeTableAlign(fields.tableAlign),
       borderColor: normalizeColor(fields.borderColor),
+      borderStyle: normalizeBorderStyle(fields.borderStyle),
+      cellPadding: normalizeCellPadding(fields.cellPadding),
+      striped: isTrue(fields.striped) || undefined,
+      stripeColor: normalizeColor(fields.stripeColor),
+      caption: normalizeCaption(fields.caption),
       background: normalizeColor(fields.background),
       verticalAlign: normalizeVerticalAlign(fields.verticalAlign),
     }),
@@ -115,7 +137,8 @@ export const setAttribute = (element: HTMLElement, attributeName: string, attrib
 
 export const writeCellValue = (lineElement: HTMLElement, cellValue: TableCellValue): void => {
   const { table, row, cell, rowspan, colspan, widths, rowHeight } = cellValue
-  const { header, tableAlign, borderColor, background, verticalAlign } = cellValue
+  const { header, tableAlign, borderColor, borderStyle, cellPadding, striped, stripeColor, caption } = cellValue
+  const { background, verticalAlign } = cellValue
 
   setAttribute(lineElement, 'data-table', table)
   setAttribute(lineElement, 'data-row', row)
@@ -127,6 +150,11 @@ export const writeCellValue = (lineElement: HTMLElement, cellValue: TableCellVal
   setAttribute(lineElement, 'data-header', header ? 'true' : null)
   setAttribute(lineElement, 'data-table-align', tableAlign ?? null)
   setAttribute(lineElement, 'data-border-color', borderColor ?? null)
+  setAttribute(lineElement, 'data-border-style', borderStyle ?? null)
+  setAttribute(lineElement, 'data-cell-padding', cellPadding ?? null)
+  setAttribute(lineElement, 'data-striped', striped ? 'true' : null)
+  setAttribute(lineElement, 'data-stripe-color', stripeColor ?? null)
+  setAttribute(lineElement, 'data-caption', caption ?? null)
   setAttribute(lineElement, 'data-background', background ?? null)
   setAttribute(lineElement, 'data-vertical-align', verticalAlign ?? null)
 }
@@ -145,6 +173,11 @@ export const readCellValue = (lineElement: HTMLElement) => {
     header: dataset.header,
     tableAlign: dataset.tableAlign,
     borderColor: dataset.borderColor,
+    borderStyle: dataset.borderStyle,
+    cellPadding: dataset.cellPadding,
+    striped: dataset.striped,
+    stripeColor: dataset.stripeColor,
+    caption: dataset.caption,
     background: dataset.background,
     verticalAlign: dataset.verticalAlign,
   })

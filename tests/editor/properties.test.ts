@@ -164,7 +164,7 @@ describe('saving', () => {
     const html = quill.getSemanticHTML()
 
     expect(html).toMatch(
-      /<th style="border: 1px solid #ff0000; text-align: left; [^"]*background-color: rgb\(255, 242, 204\);">/,
+      /<th style="border: 1px solid #ff0000; text-align: left; [^"]*background-color: rgb\(255, 242, 204\);" scope="col">/,
     )
     expect(html).toContain('<td style="border: 1px solid #ff0000;">')
     expect(html).not.toContain('--qlt-border')

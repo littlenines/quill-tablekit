@@ -1,10 +1,13 @@
-import { CELL_FORMAT, HEADER_BACKGROUND } from '../config/constants'
+import { CELL_FORMAT, HEADER_BACKGROUND, STRIPE_BACKGROUND } from '../config/constants'
 import { makeId, parseRowHeight, parseWidths, type TableCellValue } from '../model/cellValue'
 import {
+  normalizeBorderStyle,
+  normalizeCaption,
   normalizeColor,
   normalizeTableAlign,
   normalizeVerticalAlign,
   withoutEmptyValues,
+  type CellPadding,
   type TableAlign,
 } from '../model/properties'
 import { Delta, Parchment, type ParchmentTypes } from '../utils/quill'
@@ -14,6 +17,13 @@ type Operation = Delta['ops'][number]
 
 const pastedTableIds = new WeakMap<Element, string>()
 const pastedRowIds = new WeakMap<Element, string>()
+
+interface Stripes {
+  color: string
+  rows: Set<Element>
+}
+
+const stripesOfTables = new WeakMap<Element, Stripes | null>()
 
 const idForElement = (idsByElement: WeakMap<Element, string>, element: Element, prefix: string): string => {
   if (!idsByElement.has(element)) idsByElement.set(element, makeId(prefix))
@@ -93,6 +103,58 @@ const readTableAlign = ({ style, align }: HTMLTableElement): TableAlign | undefi
   return normalizeTableAlign(align.toLowerCase())
 }
 
+const backgroundOf = (cellElement: HTMLTableCellElement) =>
+  normalizeColor(cellElement.style.backgroundColor || cellElement.getAttribute('bgcolor'))
+
+const mostCommonBackground = (cellElements: HTMLTableCellElement[]): [color: string, cellCount: number] | null => {
+  const cellCounts = new Map<string, number>()
+
+  for (const cellElement of cellElements) {
+    const background = backgroundOf(cellElement)
+
+    if (background) cellCounts.set(background, (cellCounts.get(background) ?? 0) + 1)
+  }
+
+  return [...cellCounts].sort(([, firstCount], [, secondCount]) => secondCount - firstCount)[0] ?? null
+}
+
+// Every other row under the header shares one background, and the rows between don't have it.
+// One such row is too little to tell stripes from a colored row, unless it's the default stripe color.
+const findStripes = (tableElement: HTMLTableElement): Stripes | null => {
+  const bodyRows = [...tableElement.rows].slice(hasHeaderRow(tableElement) ? 1 : 0)
+  const stripeRows = bodyRows.filter((_rowElement, rowNumber) => rowNumber % 2 === 1)
+  const plainRows = bodyRows.filter((_rowElement, rowNumber) => rowNumber % 2 === 0)
+  const stripeCells = stripeRows.flatMap((rowElement) => [...rowElement.cells])
+  const [color, cellCount] = mostCommonBackground(stripeCells) ?? []
+
+  if (!color || !cellCount || cellCount * 2 <= stripeCells.length) return null
+  if (stripeRows.length < 2 && color !== STRIPE_BACKGROUND) return null
+
+  const plainRowsHaveIt = plainRows.some((rowElement) =>
+    [...rowElement.cells].some((cellElement) => backgroundOf(cellElement) === color),
+  )
+
+  return plainRowsHaveIt ? null : { color, rows: new Set(stripeRows) }
+}
+
+const stripesOf = (tableElement: HTMLTableElement): Stripes | null => {
+  if (!stripesOfTables.has(tableElement)) stripesOfTables.set(tableElement, findStripes(tableElement))
+
+  return stripesOfTables.get(tableElement) ?? null
+}
+
+const readBorderStyle = ({ style }: HTMLTableCellElement) =>
+  normalizeBorderStyle(style.borderTopStyle || style.borderStyle)
+
+const readCellPadding = ({ style }: HTMLTableCellElement): CellPadding | undefined => {
+  const topPadding = Number.parseFloat(style.paddingTop)
+
+  if (Number.isNaN(topPadding)) return undefined
+  if (topPadding <= 2) return 'compact'
+
+  return topPadding >= 7 ? 'wide' : undefined
+}
+
 const withoutBackground = (content: Delta, cellBackground: string | undefined): Delta => {
   if (!cellBackground) return content
 
@@ -116,8 +178,11 @@ export const matchTableCell = (cellNode: Node, cellContent: Delta, scroll: Scrol
 
   const isHeaderTable = hasHeaderRow(tableElement)
   const isHeaderCell = isHeaderTable && rowElement === tableElement.rows[0]
-  const pastedBackground = normalizeColor(cellElement.style.backgroundColor || cellElement.getAttribute('bgcolor'))
-  const background = isHeaderCell && pastedBackground === HEADER_BACKGROUND ? undefined : pastedBackground
+  const stripes = stripesOf(tableElement)
+  const pastedBackground = backgroundOf(cellElement)
+  const isStripeColor = stripes?.rows.has(rowElement) === true && pastedBackground === stripes.color
+  const isTableColor = (isHeaderCell && pastedBackground === HEADER_BACKGROUND) || isStripeColor
+  const background = isTableColor ? undefined : pastedBackground
   const cellValue: TableCellValue = {
     table: idForElement(pastedTableIds, tableElement, 'tbl'),
     row: idForElement(pastedRowIds, rowElement, 'row'),
@@ -130,6 +195,11 @@ export const matchTableCell = (cellNode: Node, cellContent: Delta, scroll: Scrol
       header: isHeaderTable || undefined,
       tableAlign: readTableAlign(tableElement),
       borderColor: normalizeColor(tableElement.style.borderColor),
+      borderStyle: readBorderStyle(cellElement),
+      cellPadding: readCellPadding(cellElement),
+      striped: stripes ? true : undefined,
+      stripeColor: stripes?.color === STRIPE_BACKGROUND ? undefined : stripes?.color,
+      caption: normalizeCaption(tableElement.caption?.textContent),
       background,
       verticalAlign: normalizeVerticalAlign(cellElement.style.verticalAlign || cellElement.getAttribute('valign')),
     }),
@@ -137,6 +207,8 @@ export const matchTableCell = (cellNode: Node, cellContent: Delta, scroll: Scrol
 
   return toCellLines(withoutBackground(cellContent, pastedBackground), cellValue, scroll)
 }
+
+export const matchCaption = (): Delta => new Delta()
 
 export const matchTableRow = (_rowNode: Node, rowContent: Delta): Delta =>
   new Delta(

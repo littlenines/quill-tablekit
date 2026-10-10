@@ -15,6 +15,56 @@ describe('cell selection highlight', () => {
   })
 })
 
+describe('current cell highlight', () => {
+  const activeCell = (host: HTMLElement) => host.querySelector<HTMLElement>('.qlt-active-cell')
+
+  it('marks the cell with the cursor, and nothing outside a table', () => {
+    const { quill, host, tableKit } = setup()
+
+    quill.setText('before\n')
+    quill.setSelection(0, 0, 'user')
+    expect(activeCell(host)?.style.display).not.toBe('block')
+
+    quill.setSelection(7, 0, 'user')
+    tableKit.insertTable(2, 2)
+    expect(activeCell(host)?.style.display).toBe('block')
+
+    quill.setSelection(0, 0, 'user')
+    expect(activeCell(host)?.style.display).toBe('none')
+  })
+
+  it('makes way for the highlight when several cells are selected', () => {
+    const { quill, host } = setupWithTable(2, 2)
+
+    quill.setSelection(0, cellIndex(quill, 1), 'user')
+
+    expect(activeCell(host)?.style.display).toBe('none')
+    expect(host.querySelector<HTMLElement>('.qlt-selection')?.style.display).toBe('block')
+  })
+
+  it('stays while the properties panel is open', () => {
+    const { quill, host } = setupWithTable(1, 1)
+
+    quill.setSelection(0, 0, 'user')
+    host.querySelector<HTMLButtonElement>('.qlt-action-bar [aria-label="Cell properties"]')?.click()
+    quill.blur()
+
+    expect(quill.getSelection()).toBeNull()
+    expect(activeCell(host)?.style.display).toBe('block')
+  })
+
+  it('goes away together with the action bar when the editor becomes read-only', async () => {
+    const { quill, host } = setupWithTable(1, 1)
+
+    quill.setSelection(0, 0, 'user')
+    quill.disable()
+    await Promise.resolve()
+
+    expect(activeCell(host)?.style.display).toBe('none')
+    expect(host.querySelector<HTMLElement>('.qlt-action-bar')?.style.display).toBe('none')
+  })
+})
+
 describe('options', () => {
   it('adds no resize handle when resizable is off', () => {
     const { host } = setup({ resizable: false })

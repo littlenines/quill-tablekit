@@ -4,6 +4,7 @@ import type Toolbar from 'quill/modules/toolbar'
 export const setupToolbarButton = (
   quill: Quill,
   ariaLabel: string,
+  icon: string,
   onClick: () => void,
   signal: AbortSignal,
 ): HTMLButtonElement | null => {
@@ -28,7 +29,9 @@ export const setupToolbarButton = (
     )
   }
 
-  if (!tableButton.innerHTML.trim()) {
+  if (icon) {
+    tableButton.innerHTML = icon
+  } else if (!tableButton.innerHTML.trim()) {
     const quillIcons = Quill.import('ui/icons') as Record<string, string>
 
     tableButton.innerHTML = quillIcons.table ?? '▦'

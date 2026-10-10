@@ -44,16 +44,26 @@ When the cursor is in a table, a small bar with buttons shows up next to the cel
 
 | Button           | What it does                                                                     |
 | ---------------- | -------------------------------------------------------------------------------- |
-| Rows             | Opens a short menu: insert a row above or below, select the row, delete the row. |
-| Columns          | The same for columns.                                                            |
+| Rows             | Opens a short menu: insert, move, duplicate, select or delete rows.              |
+| Columns          | The same for columns, plus Equal column widths.                                  |
 | Merge / Split    | Merges the selected cells. If you're in a merged cell, it becomes Split instead. |
 | Header row       | Turns the header row on or off. The button stays pressed while it's on.          |
 | Cell properties  | Opens the panel for the selected cells.                                          |
 | Table properties | Opens the panel for the whole table.                                             |
-| More             | Insert a paragraph above or below the table, copy the table.                     |
+| More             | Insert a paragraph above or below the table, fit it to the width, copy it.       |
 | Delete table     | Removes the table. Undo brings it back.                                          |
 
 Click a button again to close its menu or panel. If the table moves while a menu or panel is open (say you just centered it), the menu or panel moves along with its button. If you'd rather not have the bar, set `actionBar: false`.
+
+### With the keyboard
+
+Press Alt+F10 while the cursor is in a table to jump to the bar. Then:
+
+- Left and Right move between the buttons, Home and End go to the first and last one.
+- Enter or Space presses a button. A menu or panel opened this way gets the focus, and you move through a menu with Up and Down.
+- Escape closes the menu and puts you back on its button. Escape on the bar takes you back to the text, where you were.
+
+You can also bring your own icons for the buttons, see [Icons](./options.md#icons).
 
 ## The table menu
 
@@ -61,7 +71,9 @@ Click the table button in the toolbar while the cursor is in a table. You get ev
 
 - Insert row above / below
 - Insert column left / right
+- Move row up / down, move column left / right, duplicate row / column
 - Insert paragraph above / below the table
+- Equal column widths, Fit table to width
 - Select row / column, Copy table
 - Merge cells / Split cell
 - Header row
@@ -79,6 +91,14 @@ Some details:
 Right-click works like everywhere else on the page and shows the browser's menu. If you want the table menu on right-click instead, set `contextMenu: true`. Right-clicking a cell outside your current selection then moves the cursor into that cell first.
 
 Every one of these can be undone with a single undo.
+
+## Moving and duplicating rows and columns
+
+**Move row up** and **Move row down** swap the row with its neighbour. **Move column left** and **Move column right** do the same for columns, and the column keeps its width. The cursor stays in the cell you were in, so you can press the same action a few times to move a row further.
+
+If a merged cell covers more than one row, those rows move together, and they jump over a neighbour that's merged the same way. The menu item is grayed out when there's nowhere to go, like Move row up in the first row.
+
+**Duplicate row** adds a copy of the row right under it: the text, the colors, merged cells and the row height. **Duplicate column** adds a copy on the right. Like inserting a column, it keeps the table the same width.
 
 ## Writing above or below a table
 
@@ -98,21 +118,30 @@ In the HTML from `getSemanticHTML()`, the first row's cells come out as `<th>` i
 
 **Cell properties** opens a small panel for the selected cells:
 
-- **Background**: pick a color, or the crossed-out box to remove it.
+- **Background**: click the color button and pick a color, or the crossed-out box to remove it.
 - **Vertical alignment**: top, middle or bottom.
 - **Text alignment**: left, center, right or justify. This uses Quill's normal `align` format on every line of the cell.
 
 **Table properties** works on the whole table:
 
 - **Table alignment**: left, center or right. It only shows when the table is narrower than the editor, so resize a column first.
-- **Border color**: the color of all the cell borders.
+- **Borders**: solid, dashed or none. A table without borders still shows faint dashed lines in the editor so you can see the cells. They're not in the saved HTML. The color button next to it sets the color of all the cell borders. **Default** goes back to the light gray.
+- **Cell spacing**: how much room there is around the text in each cell: compact, normal or wide.
 - **Background**: colors every cell at once.
+- **Striped rows**: every other row gets a light gray background, which makes long tables easier to read. With a header row, the stripes start under it. A cell with its own background keeps it. The color button next to it picks another stripe color, and picking one turns stripes on. **Default** goes back to the light gray.
+- **Caption**: a short title above the table. Type it and press Enter. It's saved as a `<caption>`, which screen readers read out, so it's a good way to say what the table is about. Empty the box to remove it.
 
 Every click changes the table right away, and the panel stays open so you can change a few things in a row. Click outside it or press Escape to close it. Each change is one undo step.
 
 New rows and columns copy the background and vertical alignment of the cells next to them, and splitting a merged cell gives all the new cells its look.
 
+Each color is a small button that shows the current color. Click it and the colors open right under it. Pick one and they close again. Only one set of colors is open at a time, so the panel stays short.
+
 The colors come from the [`colors` option](./options.md#colors). For any other color, use the row under the colors: click the small square to open your browser's color picker, or type a color in the box next to it and press Enter. Anything CSS understands works, like `#1f6feb`, `rgb(31, 111, 235)` or `teal`. If it's not a color, the box turns red and nothing changes. The picker applies the color when you close it, so trying out colors doesn't fill up the undo history.
+
+## The current cell
+
+The cell with the cursor gets a blue outline and a faint blue background, so you can see where you're typing at a glance. When you select several cells, the outline makes way for the highlight of the selection. It stays while you work in the properties panel or on the action bar, so you can see which cells you're changing. It's not shown in a read-only editor. The color comes from `--qlt-accent` and `--qlt-active-cell-bg`, see [Colors and styles](./options.md#colors-and-styles).
 
 ## Merging cells
 
@@ -152,9 +181,22 @@ While you drag, the table stays as it is and only a blue line (or a dashed outli
 
 Widths and heights are saved with the content, and each drag is one undo step. If you don't want any resizing, set `resizable: false`.
 
+Resizing also works when the editor is zoomed with CSS, like `transform: scale(0.8)` on a parent element. The lines and the outline stay under the mouse, and the sizes are saved in normal pixels.
+
+### Equal widths and fitting the editor
+
+After some dragging, two items in the menu clean things up:
+
+- **Equal column widths** (under Columns) makes every column the same width, without changing how wide the table is.
+- **Fit table to width** (under More) makes the table exactly as wide as the editor. The columns keep their proportions.
+
+Both are grayed out when there's nothing to do, for example on a new table, which already fills the editor with equal columns.
+
 ## Keyboard
 
 - Tab moves to the next cell and selects what's in it. Shift+Tab goes back. Tab in the last cell adds a new row.
+- Up and Down go to the cell above or below, at about the same spot in the line, like in Word or Google Docs. In a cell with several lines (or text that wraps), they first move through those lines. From a merged cell, Down goes to the row under all of it. From the first or last row, they leave the table.
+- Alt+F10 moves the focus to the action bar, see [With the keyboard](#with-the-keyboard).
 - Enter makes a new line inside the same cell.
 - Backspace at the start of a cell does nothing. Normally Quill would join it with the cell before.
 - Delete at the end of a cell does nothing, for the same reason.

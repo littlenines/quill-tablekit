@@ -1,6 +1,7 @@
 import type Quill from 'quill'
 import { MIN_ROW_HEIGHT } from '../config/constants'
 import type { TableLayout } from '../editing/commands'
+import { scaleColumnWidths, sumOf } from '../model/layout'
 import type { TableAlign } from '../model/properties'
 import { tableLeftAfterResize } from './ColumnResizer'
 import { createElement } from './dom'
@@ -10,6 +11,8 @@ import {
   measureColumnWidths,
   measureRowHeights,
   naturalRowHeight,
+  rowsBoxOf,
+  scaleOf,
   tableAlignmentOf,
   tableGrid,
   toContainerPosition,
@@ -22,6 +25,7 @@ const KEEP_VISIBLE_DISTANCE = 24
 interface TableDrag {
   tableElement: HTMLTableElement
   alignment: TableAlign
+  scale: number
   startTableBox: DOMRect
   startClientX: number
   startClientY: number
@@ -30,36 +34,6 @@ interface TableDrag {
   minHeights: number[]
   currentWidths: number[]
   currentHeights: number[]
-}
-
-const sumOf = (numbers: number[]) => numbers.reduce((total, number) => total + number, 0)
-
-export const scaleColumnWidths = (
-  startWidths: number[],
-  widthChange: number,
-  minWidth: number,
-  maxTableWidth = Infinity,
-): number[] => {
-  const startTotal = sumOf(startWidths)
-  const widestTotal = Math.max(maxTableWidth, startTotal)
-  const newTotal = Math.max(minWidth * startWidths.length, Math.min(widestTotal, startTotal + widthChange))
-
-  const exactWidths = startWidths.map((width) => (width * newTotal) / startTotal)
-  const roundedWidths = exactWidths.map(Math.floor)
-  let pixelsLeft = Math.round(newTotal) - sumOf(roundedWidths)
-
-  const columnsByRemainder = exactWidths
-    .map((width, columnIndex) => ({ columnIndex, remainder: width - Math.floor(width) }))
-    .sort((first, second) => second.remainder - first.remainder)
-
-  for (const { columnIndex } of columnsByRemainder) {
-    if (pixelsLeft <= 0) break
-
-    roundedWidths[columnIndex] += 1
-    pixelsLeft -= 1
-  }
-
-  return roundedWidths.map((width) => Math.max(minWidth, width))
 }
 
 export const growRowHeights = (startHeights: number[], heightChange: number, minHeights: number[]): number[] => {
@@ -134,7 +108,7 @@ export class TableResizer {
       return
     }
 
-    const tableBox = this.#hoveredTable.getBoundingClientRect()
+    const tableBox = rowsBoxOf(this.#hoveredTable)
     const handleOnLeft = tableAlignmentOf(this.#hoveredTable) === 'right'
 
     this.#handle.classList.toggle('is-bottom-left', handleOnLeft)
@@ -171,7 +145,8 @@ export class TableResizer {
     this.#activeDrag = {
       tableElement,
       alignment: tableAlignmentOf(tableElement),
-      startTableBox: tableElement.getBoundingClientRect(),
+      scale: scaleOf(tableElement),
+      startTableBox: rowsBoxOf(tableElement),
       startClientX: event.clientX,
       startClientY: event.clientY,
       startWidths,
@@ -193,7 +168,7 @@ export class TableResizer {
 
     if (!drag) return
 
-    const mouseDistance = event.clientX - drag.startClientX
+    const mouseDistance = (event.clientX - drag.startClientX) / drag.scale
     const widthChange =
       drag.alignment === 'center' ? mouseDistance * 2 : drag.alignment === 'right' ? -mouseDistance : mouseDistance
 
@@ -201,11 +176,14 @@ export class TableResizer {
 
     drag.currentWidths = scaleColumnWidths(drag.startWidths, widthChange, this.#minColumnWidth, maxTableWidth)
     showPastLimit(isPastWidthLimit(drag.startWidths, widthChange, maxTableWidth), this.#handle, this.#outline)
-    drag.currentHeights = growRowHeights(drag.startHeights, event.clientY - drag.startClientY, drag.minHeights)
+
+    const heightChange = (event.clientY - drag.startClientY) / drag.scale
+
+    drag.currentHeights = growRowHeights(drag.startHeights, heightChange, drag.minHeights)
 
     const outlineWidth = sumOf(drag.currentWidths)
     const outlineHeight = sumOf(drag.currentHeights)
-    const outlineLeft = tableLeftAfterResize(drag.startTableBox, drag.alignment, outlineWidth)
+    const outlineLeft = tableLeftAfterResize(drag.startTableBox, drag.alignment, outlineWidth * drag.scale)
     const outlineTop = drag.startTableBox.top
     const { left, top } = toContainerPosition(this.#container, outlineLeft, outlineTop)
 
@@ -216,7 +194,10 @@ export class TableResizer {
       width: `${outlineWidth}px`,
       height: `${outlineHeight}px`,
     })
-    this.#placeHandle(drag.alignment === 'right' ? outlineLeft : outlineLeft + outlineWidth, outlineTop + outlineHeight)
+
+    const outlineRight = outlineLeft + outlineWidth * drag.scale
+
+    this.#placeHandle(drag.alignment === 'right' ? outlineLeft : outlineRight, outlineTop + outlineHeight * drag.scale)
   }
 
   #finishDrag = (): void => {

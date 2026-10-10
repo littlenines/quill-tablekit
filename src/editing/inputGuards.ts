@@ -1,6 +1,6 @@
 import type Quill from 'quill'
 import type { Range } from 'quill'
-import type { PasteLimits } from '../model/TableModel'
+import type { PasteLimits } from '../model/paste'
 import { Delta } from '../utils/quill'
 import { clipboardContentOf, type ClipboardContent } from './cellClipboard'
 import { hasTableLines, toCellLines } from './clipboard'

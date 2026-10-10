@@ -221,10 +221,10 @@ describe('properties panel', () => {
 
     expect(optionButton(panel, 'Table alignment', 'Center')?.getAttribute('aria-pressed')).toBe('true')
     expect(optionButton(panel, 'Border color', '#ff0000')).toBeNull()
-    expect(optionButton(panel, 'Border color', 'No color')?.getAttribute('aria-pressed')).toBe('false')
+    expect(optionButton(panel, 'Border color', 'Default')?.getAttribute('aria-pressed')).toBe('false')
   })
 
-  it('uses the colors option and removes a color with No color', () => {
+  it('uses the colors option and goes back to the default color', () => {
     const { quill, host } = setupWithTable(1, 1, { colors: ['#123456', 'nope;'] })
 
     quill.setSelection(0, 0)
@@ -237,7 +237,7 @@ describe('properties panel', () => {
     optionButton(panel, 'Border color', '#123456')?.click()
     expect(tables(quill)[0].style.getPropertyValue('--qlt-border')).toBe('#123456')
 
-    optionButton(panel, 'Border color', 'No color')?.click()
+    optionButton(panel, 'Border color', 'Default')?.click()
     expect(tables(quill)[0].style.getPropertyValue('--qlt-border')).toBe('')
   })
 

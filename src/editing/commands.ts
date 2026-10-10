@@ -1,7 +1,11 @@
 import Quill from 'quill'
 import type { Range } from 'quill'
 import { TableContainer } from '../blots'
-import { TableModel, type CellData, type PasteLimits } from '../model/TableModel'
+import type { CellData } from '../model/cell'
+import { clearContent } from '../model/cellChanges'
+import { pasteTable, type PasteLimits } from '../model/paste'
+import { insertRow } from '../model/rowsAndColumns'
+import { TableModel } from '../model/TableModel'
 import { Delta } from '../utils/quill'
 import { getTableContext, readTable, type TableContext } from './context'
 import type { TableEdit } from './edits'
@@ -102,7 +106,7 @@ export const moveToCell = (quill: Quill, range: Range | null, direction: 1 | -1)
   let targetCell = targetPosition >= 0 ? cellsInOrder[targetPosition] : undefined
 
   if (!targetCell && direction === 1) {
-    ;[targetCell] = model.insertRow(model.rowCount)
+    ;[targetCell] = insertRow(model, model.rowCount)
     commitTable(quill, tableContext, null)
   }
 
@@ -182,7 +186,7 @@ export const deleteSelectedContent = (quill: Quill, range: Range): boolean => {
   if (tableContext) {
     const { model, selectedArea, startCell } = tableContext
 
-    model.clearContent(model.cellsInArea(selectedArea))
+    clearContent(model.cellsInArea(selectedArea))
     commitTable(quill, tableContext, startCell)
 
     return true
@@ -201,7 +205,8 @@ export const pasteTableIntoCells = (
   limits: PasteLimits,
 ): void => {
   const { model, selectedArea } = tableContext
-  const pastedArea = model.pasteTable(TableModel.fromDelta(pastedContent), selectedArea.top, selectedArea.left, limits)
+  const pastedTable = TableModel.fromDelta(pastedContent)
+  const pastedArea = pasteTable(model, pastedTable, selectedArea.top, selectedArea.left, limits)
 
   commitTable(quill, tableContext, model.grid[pastedArea.top][pastedArea.left])
 }

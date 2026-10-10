@@ -1,4 +1,5 @@
 import { normalizeColor } from '../model/properties'
+import { ICONS } from '../ui/icons'
 
 export interface TableKitLabels {
   insertTable: string
@@ -10,6 +11,14 @@ export interface TableKitLabels {
   insertRowBelow: string
   insertColumnLeft: string
   insertColumnRight: string
+  moveRowUp: string
+  moveRowDown: string
+  moveColumnLeft: string
+  moveColumnRight: string
+  duplicateRow: string
+  duplicateColumn: string
+  equalColumnWidths: string
+  fitToWidth: string
   insertParagraphAbove: string
   insertParagraphBelow: string
   selectRow: string
@@ -25,6 +34,18 @@ export interface TableKitLabels {
   deleteTable: string
   background: string
   borderColor: string
+  borderStyle: string
+  borderSolid: string
+  borderDashed: string
+  borderNone: string
+  cellPadding: string
+  paddingCompact: string
+  paddingNormal: string
+  paddingWide: string
+  stripedRows: string
+  stripeColor: string
+  defaultColor: string
+  caption: string
   noColor: string
   customColor: string
   colorCode: string
@@ -44,9 +65,13 @@ export interface TableKitLabels {
   moreGroup: string
 }
 
+export type TableKitIcons = Record<keyof typeof ICONS, string>
+
 export const MENU_GROUPS = [
   ['insertRowAbove', 'insertRowBelow', 'insertColumnLeft', 'insertColumnRight'],
+  ['moveRowUp', 'moveRowDown', 'moveColumnLeft', 'moveColumnRight', 'duplicateRow', 'duplicateColumn'],
   ['insertParagraphAbove', 'insertParagraphBelow'],
+  ['equalColumnWidths', 'fitToWidth'],
   ['selectRow', 'selectColumn', 'copyTable'],
   ['mergeCells', 'splitCell'],
   ['headerRow', 'cellProperties', 'tableProperties'],
@@ -68,10 +93,14 @@ export interface TableKitOptions {
   minColumnWidth?: number
   menu?: TableMenuItemName[]
   colors?: string[]
+  icons?: Partial<TableKitIcons>
   labels?: Partial<TableKitLabels>
 }
 
-export type ResolvedTableKitOptions = Required<Omit<TableKitOptions, 'labels'>> & { labels: TableKitLabels }
+export type ResolvedTableKitOptions = Required<Omit<TableKitOptions, 'labels' | 'icons'>> & {
+  icons: TableKitIcons
+  labels: TableKitLabels
+}
 
 export const DEFAULT_LABELS = {
   insertTable: 'Insert table',
@@ -83,6 +112,14 @@ export const DEFAULT_LABELS = {
   insertRowBelow: 'Insert row below',
   insertColumnLeft: 'Insert column left',
   insertColumnRight: 'Insert column right',
+  moveRowUp: 'Move row up',
+  moveRowDown: 'Move row down',
+  moveColumnLeft: 'Move column left',
+  moveColumnRight: 'Move column right',
+  duplicateRow: 'Duplicate row',
+  duplicateColumn: 'Duplicate column',
+  equalColumnWidths: 'Equal column widths',
+  fitToWidth: 'Fit table to width',
   insertParagraphAbove: 'Insert paragraph above table',
   insertParagraphBelow: 'Insert paragraph below table',
   selectRow: 'Select row',
@@ -98,6 +135,18 @@ export const DEFAULT_LABELS = {
   deleteTable: 'Delete table',
   background: 'Background',
   borderColor: 'Border color',
+  borderStyle: 'Borders',
+  borderSolid: 'Solid',
+  borderDashed: 'Dashed',
+  borderNone: 'None',
+  cellPadding: 'Cell spacing',
+  paddingCompact: 'Compact',
+  paddingNormal: 'Normal',
+  paddingWide: 'Wide',
+  stripedRows: 'Striped rows',
+  stripeColor: 'Stripe color',
+  defaultColor: 'Default',
+  caption: 'Caption',
   noColor: 'No color',
   customColor: 'Custom color',
   colorCode: 'Color code',
@@ -146,6 +195,7 @@ export const DEFAULT_OPTIONS = {
   minColumnWidth: 40,
   menu: [...MENU_ITEM_NAMES],
   colors: DEFAULT_COLORS,
+  icons: ICONS,
   labels: DEFAULT_LABELS,
 } satisfies ResolvedTableKitOptions
 
@@ -161,6 +211,13 @@ const colorsOr = (input: unknown, fallback: string[]): string[] => {
   return validColors.length > 0 ? validColors : fallback
 }
 
+const iconsOr = (input: unknown, fallback: TableKitIcons): TableKitIcons => {
+  const userIcons = input != null && typeof input === 'object' ? Object.entries(input) : []
+  const knownIcons = userIcons.filter(([iconName, markup]) => iconName in fallback && typeof markup === 'string')
+
+  return { ...fallback, ...Object.fromEntries(knownIcons) }
+}
+
 export const resolveOptions = (userOptions: TableKitOptions = {}): ResolvedTableKitOptions => ({
   pickerRows: positiveWholeNumberOr(userOptions.pickerRows, DEFAULT_OPTIONS.pickerRows),
   pickerColumns: positiveWholeNumberOr(userOptions.pickerColumns, DEFAULT_OPTIONS.pickerColumns),
@@ -172,5 +229,6 @@ export const resolveOptions = (userOptions: TableKitOptions = {}): ResolvedTable
   minColumnWidth: positiveWholeNumberOr(userOptions.minColumnWidth, DEFAULT_OPTIONS.minColumnWidth),
   menu: menuItemsOr(userOptions.menu, DEFAULT_OPTIONS.menu),
   colors: colorsOr(userOptions.colors, DEFAULT_OPTIONS.colors),
+  icons: iconsOr(userOptions.icons, DEFAULT_OPTIONS.icons),
   labels: { ...DEFAULT_LABELS, ...userOptions.labels },
 })

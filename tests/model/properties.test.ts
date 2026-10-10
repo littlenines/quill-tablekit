@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  normalizeBorderStyle,
+  normalizeCaption,
+  normalizeCellPadding,
   normalizeColor,
   normalizeTableAlign,
   normalizeTextAlign,
@@ -31,6 +34,23 @@ describe('normalizeColor', () => {
     expect(normalizeColor('red; background: url(x)')).toBeUndefined()
     expect(normalizeColor(42)).toBeUndefined()
     expect(normalizeColor('')).toBeUndefined()
+  })
+})
+
+describe('table style', () => {
+  it('drops the default border style and spacing, so they are not saved', () => {
+    expect(normalizeBorderStyle('solid')).toBeUndefined()
+    expect(normalizeBorderStyle('dashed')).toBe('dashed')
+    expect(normalizeBorderStyle('dotted')).toBeUndefined()
+    expect(normalizeCellPadding('normal')).toBeUndefined()
+    expect(normalizeCellPadding('compact')).toBe('compact')
+  })
+
+  it('cleans up the caption', () => {
+    expect(normalizeCaption('  Sales \n by   region ')).toBe('Sales by region')
+    expect(normalizeCaption('   ')).toBeUndefined()
+    expect(normalizeCaption(42)).toBeUndefined()
+    expect(normalizeCaption('x'.repeat(400))).toHaveLength(300)
   })
 })
 

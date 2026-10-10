@@ -30,6 +30,11 @@ export class TableContainer extends Container {
     setStyle(tableElement, 'margin-left', cellValue?.tableAlign ? 'auto' : undefined)
     setStyle(tableElement, 'margin-right', cellValue?.tableAlign === 'center' ? 'auto' : undefined)
     setStyle(tableElement, '--qlt-border', cellValue?.borderColor)
+    setAttribute(tableElement, 'data-border-style', cellValue?.borderStyle ?? null)
+    setAttribute(tableElement, 'data-cell-padding', cellValue?.cellPadding ?? null)
+    setAttribute(tableElement, 'data-striped', cellValue?.striped ? 'true' : null)
+    setStyle(tableElement, '--qlt-table-stripe', cellValue?.stripeColor)
+    setAttribute(tableElement, 'data-caption', cellValue?.caption ?? null)
 
     this.#applyColumnWidths(cellValue?.widths ?? null)
   }

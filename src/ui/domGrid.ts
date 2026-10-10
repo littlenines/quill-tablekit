@@ -48,21 +48,37 @@ export const boundingBoxOf = (cellElements: Iterable<HTMLTableCellElement | null
   return new DOMRect(left, top, right - left, bottom - top)
 }
 
+// How much a transform: scale() on a parent element shrinks or grows what is on screen
+export const scaleOf = (element: Element | null): number => {
+  if (!(element instanceof HTMLElement) || element.offsetWidth === 0) return 1
+
+  const screenWidth = element.getBoundingClientRect().width
+
+  return screenWidth > 0 ? screenWidth / element.offsetWidth : 1
+}
+
+// The table without its caption, which sits inside the table's box
+export const rowsBoxOf = (tableElement: HTMLTableElement): DOMRect =>
+  (tableElement.tBodies[0] ?? tableElement).getBoundingClientRect()
+
 export const toContainerPosition = (
   container: HTMLElement,
   clientX: number,
   clientY: number,
 ): { left: number; top: number } => {
   const containerBox = container.getBoundingClientRect()
+  const scale = scaleOf(container)
 
   return {
-    left: clientX - containerBox.left - container.clientLeft + container.scrollLeft,
-    top: clientY - containerBox.top - container.clientTop + container.scrollTop,
+    left: (clientX - containerBox.left) / scale - container.clientLeft + container.scrollLeft,
+    top: (clientY - containerBox.top) / scale - container.clientTop + container.scrollTop,
   }
 }
 
 export const measureColumnWidths = (grid: DomGrid): number[] => {
   const columnCount = grid[0]?.length ?? 0
+  const firstCellElement = grid.flat().find((cellElement) => cellElement != null)
+  const scale = scaleOf(firstCellElement?.closest('table') ?? null)
   const edgePositions: (number | undefined)[] = indexes(columnCount + 1).map(() => undefined)
 
   for (const [cellElement, area] of cellAreas(grid)) {
@@ -95,14 +111,17 @@ export const measureColumnWidths = (grid: DomGrid): number[] => {
   }
 
   return indexes(columnCount).map((columnIndex) => {
-    const width = (edgePositions[columnIndex + 1] as number) - (edgePositions[columnIndex] as number)
+    const width = ((edgePositions[columnIndex + 1] as number) - (edgePositions[columnIndex] as number)) / scale
 
     return Math.max(1, Math.round(width))
   })
 }
 
-export const measureRowHeights = (tableElement: HTMLTableElement): number[] =>
-  Array.from(tableElement.rows, (rowElement) => Math.round(rowElement.getBoundingClientRect().height))
+export const measureRowHeights = (tableElement: HTMLTableElement): number[] => {
+  const scale = scaleOf(tableElement)
+
+  return Array.from(tableElement.rows, (rowElement) => Math.round(rowElement.getBoundingClientRect().height / scale))
+}
 
 export const savedRowHeights = (tableElement: HTMLTableElement): (number | undefined)[] =>
   Array.from(tableElement.rows, (rowElement) => {
@@ -111,7 +130,7 @@ export const savedRowHeights = (tableElement: HTMLTableElement): (number | undef
     return firstLineElement ? readCellValue(firstLineElement)?.rowHeight : undefined
   })
 
-const naturalCellHeight = (cellElement: HTMLTableCellElement): number => {
+const naturalCellHeight = (cellElement: HTMLTableCellElement, scale: number): number => {
   const contentRange = document.createRange()
 
   contentRange.selectNodeContents(cellElement)
@@ -121,13 +140,15 @@ const naturalCellHeight = (cellElement: HTMLTableCellElement): number => {
     (value) => Number.parseFloat(value) || 0,
   )
 
-  return contentRange.getBoundingClientRect().height + spacing.reduce((total, value) => total + value, 0)
+  return contentRange.getBoundingClientRect().height / scale + spacing.reduce((total, value) => total + value, 0)
 }
 
 export const naturalRowHeight = (rowElement: HTMLTableRowElement, minHeight: number): number => {
   const singleRowCells = Array.from(rowElement.cells).filter((cellElement) => cellElement.rowSpan === 1)
 
-  return Math.ceil(Math.max(minHeight, ...singleRowCells.map(naturalCellHeight)))
+  const scale = scaleOf(rowElement.closest('table'))
+
+  return Math.ceil(Math.max(minHeight, ...singleRowCells.map((cellElement) => naturalCellHeight(cellElement, scale))))
 }
 
 export const editorContentWidth = (quill: Quill): number => {

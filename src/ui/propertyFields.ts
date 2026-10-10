@@ -1,20 +1,33 @@
+import { BORDER_COLOR, STRIPE_BACKGROUND } from '../config/constants'
 import type { ResolvedTableKitOptions, TableKitLabels } from '../config/options'
-import type { CellProperties, TableAlign, TableProperties, TextAlign, VerticalAlign } from '../model/properties'
-import type { PanelField } from './PropertiesPanel'
+import type {
+  BorderStyle,
+  CellPadding,
+  CellProperties,
+  TableAlign,
+  TableProperties,
+  TextAlign,
+  VerticalAlign,
+} from '../model/properties'
+import type { ColorChoice, PanelField } from './PropertiesPanel'
 
 type PanelSettings = Pick<ResolvedTableKitOptions, 'labels' | 'colors'>
 
-const colorField = (
+const colorChoice = (
   label: string,
   value: string | null,
   { labels, colors }: PanelSettings,
   onChange: (color: string | null) => void,
-): PanelField => ({
-  kind: 'colors',
+  emptyPreview?: string,
+): ColorChoice => ({
   label,
   value,
-  options: [{ value: null, label: labels.noColor }, ...colors.map((color) => ({ value: color, label: color, color }))],
+  options: [
+    { value: null, label: emptyPreview ? labels.defaultColor : labels.noColor },
+    ...colors.map((color) => ({ value: color, label: color, color })),
+  ],
   customColor: { pickerLabel: labels.customColor, codeLabel: labels.colorCode },
+  emptyPreview,
   onChange,
 })
 
@@ -23,11 +36,13 @@ const choiceField = <Choice extends string>(
   value: Choice,
   choices: [Choice, string][],
   onChange: (choice: Choice) => void,
+  color?: ColorChoice,
 ): PanelField => ({
   kind: 'choices',
   label,
   value,
   options: choices.map(([choice, choiceLabel]) => ({ value: choice, label: choiceLabel })),
+  color,
   onChange: (choice) => onChange(choice as Choice),
 })
 
@@ -51,7 +66,10 @@ export const cellPropertyFields = (
   const textChoices: [TextAlign, string][] = [...horizontalChoices(labels), ['justify', labels.alignJustify]]
 
   return [
-    colorField(labels.background, current.background, settings, (background) => applyChanges({ background })),
+    {
+      kind: 'colors',
+      ...colorChoice(labels.background, current.background, settings, (background) => applyChanges({ background })),
+    },
     choiceField(labels.verticalAlign, current.verticalAlign, verticalChoices, (verticalAlign) =>
       applyChanges({ verticalAlign }),
     ),
@@ -65,10 +83,54 @@ export const tablePropertyFields = (
   applyChanges: (changes: Partial<TableProperties>) => void,
 ): PanelField[] => {
   const { labels } = settings
+  const borderChoices: [BorderStyle, string][] = [
+    ['solid', labels.borderSolid],
+    ['dashed', labels.borderDashed],
+    ['none', labels.borderNone],
+  ]
+  const paddingChoices: [CellPadding, string][] = [
+    ['compact', labels.paddingCompact],
+    ['normal', labels.paddingNormal],
+    ['wide', labels.paddingWide],
+  ]
+  const borderColor = colorChoice(
+    labels.borderColor,
+    current.borderColor,
+    settings,
+    (color) => applyChanges({ borderColor: color }),
+    BORDER_COLOR,
+  )
+  const stripeColor = colorChoice(
+    labels.stripeColor,
+    current.stripeColor,
+    settings,
+    (color) => applyChanges({ striped: true, stripeColor: color }),
+    STRIPE_BACKGROUND,
+  )
 
   return [
     choiceField(labels.tableAlign, current.align, horizontalChoices(labels), (align) => applyChanges({ align })),
-    colorField(labels.borderColor, current.borderColor, settings, (borderColor) => applyChanges({ borderColor })),
-    colorField(labels.background, current.background, settings, (background) => applyChanges({ background })),
+    choiceField(
+      labels.borderStyle,
+      current.borderStyle,
+      borderChoices,
+      (borderStyle) => applyChanges({ borderStyle }),
+      borderColor,
+    ),
+    choiceField(labels.cellPadding, current.cellPadding, paddingChoices, (cellPadding) =>
+      applyChanges({ cellPadding }),
+    ),
+    {
+      kind: 'colors',
+      ...colorChoice(labels.background, current.background, settings, (background) => applyChanges({ background })),
+    },
+    {
+      kind: 'toggle',
+      label: labels.stripedRows,
+      value: current.striped,
+      color: stripeColor,
+      onChange: (striped) => applyChanges({ striped }),
+    },
+    { kind: 'text', label: labels.caption, value: current.caption, onChange: (caption) => applyChanges({ caption }) },
   ]
 }

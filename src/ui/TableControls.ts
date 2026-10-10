@@ -42,7 +42,7 @@ export class TableControls {
       tableKit.insertTable(rowCount, columnCount),
     )
     this.#menu = new TableMenu(container)
-    this.#panel = new PropertiesPanel(container)
+    this.#panel = new PropertiesPanel(container, settings.icons.chevron)
 
     if (settings.contextMenu && settings.menu.length > 0) {
       installContextMenu(quill, (clientX, clientY) => this.openMenu({ clientX, clientY, anchor: null }), signal)
@@ -51,6 +51,7 @@ export class TableControls {
     this.#toolbarButton = setupToolbarButton(
       quill,
       settings.labels.insertTable,
+      settings.icons.insertTable,
       () => this.#handleToolbarClick(),
       signal,
     )
@@ -70,6 +71,11 @@ export class TableControls {
           isOpenFrom: (anchor) => this.isOpen && this.#menuPosition.anchor === anchor,
           isAnythingOpen: () => this.isOpen,
           closeAll: () => this.closeAll(),
+          focusOpened: () => {
+            for (const popover of [this.#menu.popover, this.#panel.popover]) {
+              if (popover.isOpen) popover.focusFirst()
+            }
+          },
           onMoved: () => this.#followAnchor(),
         },
         signal,
@@ -83,6 +89,12 @@ export class TableControls {
 
   get isOpen(): boolean {
     return this.#picker.popover.isOpen || this.#menu.popover.isOpen || this.#panel.popover.isOpen
+  }
+
+  get isInUse(): boolean {
+    const isMenuOrPanelOpen = this.#menu.popover.isOpen || this.#panel.popover.isOpen
+
+    return isMenuOrPanelOpen || this.#actionBar?.element.contains(document.activeElement) === true
   }
 
   openMenu(menuPosition: MenuPosition, onlyItems?: TableMenuItemName[]): void {
@@ -152,6 +164,14 @@ export class TableControls {
       insertRowBelow: () => tableKit.insertRowBelow(),
       insertColumnLeft: () => tableKit.insertColumnLeft(),
       insertColumnRight: () => tableKit.insertColumnRight(),
+      moveRowUp: () => tableKit.moveRowUp(),
+      moveRowDown: () => tableKit.moveRowDown(),
+      moveColumnLeft: () => tableKit.moveColumnLeft(),
+      moveColumnRight: () => tableKit.moveColumnRight(),
+      duplicateRow: () => tableKit.duplicateRow(),
+      duplicateColumn: () => tableKit.duplicateColumn(),
+      equalColumnWidths: () => tableKit.equalizeColumnWidths(),
+      fitToWidth: () => tableKit.fitTableToWidth(),
       insertParagraphAbove: () => tableKit.insertParagraphAbove(),
       insertParagraphBelow: () => tableKit.insertParagraphBelow(),
       selectRow: () => tableKit.selectRow(),

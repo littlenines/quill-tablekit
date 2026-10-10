@@ -33,7 +33,15 @@ describe('action bar', () => {
     quill.setSelection(0, 0)
     barButton(host, 'Rows')?.click()
 
-    expect(menuLabels(host)).toEqual(['Insert row above', 'Insert row below', 'Select row', 'Delete row'])
+    expect(menuLabels(host)).toEqual([
+      'Insert row above',
+      'Insert row below',
+      'Move row up',
+      'Move row down',
+      'Duplicate row',
+      'Select row',
+      'Delete row',
+    ])
 
     barButton(host, 'Rows')?.click()
 
@@ -116,6 +124,63 @@ describe('action bar', () => {
 
     quill.setSelection(cellIndex(quill, 1), 0)
     expect(actionBar(host)?.style.display).toBe('flex')
+  })
+
+  it('gets the keyboard focus with Alt+F10 and moves between buttons with the arrow keys', () => {
+    const { quill, host } = setupWithTable(1, 1)
+
+    quill.setSelection(0, 0)
+    press(quill, 'F10', { altKey: true })
+
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Rows')
+    expect(actionBar(host)?.style.display).toBe('flex')
+
+    const pressInBar = (key: string) =>
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+
+    pressInBar('ArrowRight')
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Columns')
+    expect(barButton(host, 'Columns')?.tabIndex).toBe(0)
+    expect(barButton(host, 'Rows')?.tabIndex).toBe(-1)
+
+    pressInBar('ArrowLeft')
+    pressInBar('ArrowLeft')
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Delete table')
+
+    pressInBar('Home')
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Rows')
+
+    pressInBar('Escape')
+    expect(document.activeElement).toBe(quill.root)
+  })
+
+  it('moves the focus into a menu opened from the keyboard and back on Escape', () => {
+    const { quill, host } = setupWithTable(1, 1)
+
+    quill.setSelection(0, 0)
+    barButton(host, 'Rows')?.focus()
+    barButton(host, 'Rows')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }))
+
+    expect(document.activeElement?.textContent).toBe('Insert row above')
+
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+    )
+
+    expect(host.querySelector('.qlt-menu')).toBeNull()
+    expect(document.activeElement).toBe(barButton(host, 'Rows'))
+  })
+
+  it('uses custom icons', () => {
+    const { quill, host } = setupWithTable(1, 1, {
+      icons: { rows: '<i class="my-rows"></i>', insertTable: '<i class="my-table"></i>' },
+    })
+
+    quill.setSelection(0, 0)
+
+    expect(barButton(host, 'Rows')?.querySelector('.my-rows')).not.toBeNull()
+    expect(barButton(host, 'Columns')?.querySelector('svg')).not.toBeNull()
+    expect(host.querySelector('button.ql-table .my-table')).not.toBeNull()
   })
 
   it('can be turned off', () => {

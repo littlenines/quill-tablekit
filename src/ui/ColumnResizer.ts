@@ -1,9 +1,18 @@
 import type Quill from 'quill'
 import { cellAreas } from '../model/grid'
+import { sumOf } from '../model/layout'
 import type { TableAlign } from '../model/properties'
 import { createElement } from './dom'
 import { followMouseUntilRelease, isPastWidthLimit, showPastLimit } from './dragging'
-import { editorContentWidth, measureColumnWidths, tableAlignmentOf, tableGrid, toContainerPosition } from './domGrid'
+import {
+  editorContentWidth,
+  measureColumnWidths,
+  rowsBoxOf,
+  scaleOf,
+  tableAlignmentOf,
+  tableGrid,
+  toContainerPosition,
+} from './domGrid'
 
 const EDGE_GRAB_DISTANCE = 6
 
@@ -14,13 +23,12 @@ interface HoveredEdge {
 
 interface ActiveDrag extends HoveredEdge {
   alignment: TableAlign
+  scale: number
   startTableBox: DOMRect
   startClientX: number
   startWidths: number[]
   currentWidths: number[]
 }
-
-const sumOf = (numbers: number[]) => numbers.reduce((total, number) => total + number, 0)
 
 const canDragEdge = (edgeIndex: number, columnCount: number, alignment: TableAlign): boolean => {
   if (edgeIndex === 0) return alignment !== 'left'
@@ -123,14 +131,14 @@ export class ColumnResizer {
   }
 
   #placeHandle(tableElement: HTMLTableElement, edgeClientX: number): void {
-    const tableBox = tableElement.getBoundingClientRect()
+    const tableBox = rowsBoxOf(tableElement)
     const { left, top } = toContainerPosition(this.#container, edgeClientX, tableBox.top)
 
     Object.assign(this.#handle.style, {
       display: 'block',
       left: `${left - 5}px`,
       top: `${top}px`,
-      height: `${tableBox.height}px`,
+      height: `${tableBox.height / scaleOf(tableElement)}px`,
     })
   }
 
@@ -145,7 +153,8 @@ export class ColumnResizer {
     this.#activeDrag = {
       ...this.#hoveredEdge,
       alignment: tableAlignmentOf(tableElement),
-      startTableBox: tableElement.getBoundingClientRect(),
+      scale: scaleOf(tableElement),
+      startTableBox: rowsBoxOf(tableElement),
       startClientX: event.clientX,
       startWidths,
       currentWidths: startWidths,
@@ -161,7 +170,7 @@ export class ColumnResizer {
 
     const isOuterEdge = drag.edgeIndex === 0 || drag.edgeIndex === drag.startWidths.length
     const growsOnBothSides = isOuterEdge && drag.alignment === 'center'
-    const dragDistance = (event.clientX - drag.startClientX) * (growsOnBothSides ? 2 : 1)
+    const dragDistance = ((event.clientX - drag.startClientX) / drag.scale) * (growsOnBothSides ? 2 : 1)
     const widthGrowth = drag.edgeIndex === 0 ? -dragDistance : dragDistance
 
     const maxTableWidth = editorContentWidth(this.#quill)
@@ -169,9 +178,10 @@ export class ColumnResizer {
     drag.currentWidths = resizeColumns(drag.startWidths, drag.edgeIndex, dragDistance, this.#minWidth, maxTableWidth)
     showPastLimit(isOuterEdge && isPastWidthLimit(drag.startWidths, widthGrowth, maxTableWidth), this.#handle)
 
-    const tableLeft = tableLeftAfterResize(drag.startTableBox, drag.alignment, sumOf(drag.currentWidths))
+    const toScreen = (width: number) => width * drag.scale
+    const tableLeft = tableLeftAfterResize(drag.startTableBox, drag.alignment, toScreen(sumOf(drag.currentWidths)))
 
-    this.#placeHandle(drag.tableElement, tableLeft + sumOf(drag.currentWidths.slice(0, drag.edgeIndex)))
+    this.#placeHandle(drag.tableElement, tableLeft + toScreen(sumOf(drag.currentWidths.slice(0, drag.edgeIndex))))
   }
 
   #finishDrag = (): void => {

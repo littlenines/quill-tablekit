@@ -26,7 +26,7 @@ src/
 │   ├── TableCell.ts      <td>, with its background and vertical alignment
 │   ├── TableRow.ts       <tr>
 │   ├── TableBody.ts      <tbody>
-│   ├── TableContainer.ts <table>: column widths, header row, alignment, border color
+│   ├── TableContainer.ts <table>: column widths, header row, alignment, borders, stripes, caption
 │   ├── grouping.ts       how the containers group lines together
 │   ├── html.ts           getSemanticHTML output for tables
 │   └── index.ts          connects the blots and registers them
@@ -39,13 +39,22 @@ src/
 │   ├── commands.ts       applying a change to the editor, inserting tables, Tab moves, selecting rows
 │   ├── properties.ts     reading and changing cell and table properties
 │   ├── selection.ts      finding the table at the cursor, deleting without breaking tables
-│   ├── keyboard.ts       Tab, Backspace, Delete, Enter
+│   ├── keyboard.ts       Tab, Up, Down, Backspace, Delete, Enter
+│   ├── verticalNavigation.ts Up and Down between cells
 │   ├── inputGuards.ts    copy, cut, paste, and typing over several cells
 │   ├── cellClipboard.ts  the clipboard content for a block of cells, and Copy table
 │   └── clipboard.ts      turning pasted <td> into table lines
 ├── model/
-│   ├── TableModel.ts     a table as a grid of cells, where all the editing happens
+│   ├── TableModel.ts     a table as a grid of cells: reading and writing its lines, finding cells
+│   ├── cell.ts           a single cell, and empty or copied cells
+│   ├── rowsAndColumns.ts inserting and deleting rows and columns
+│   ├── arrange.ts        moving and duplicating rows and columns
+│   ├── merging.ts        merging and splitting cells
+│   ├── cellChanges.ts    cell style, text alignment, clearing text
+│   ├── paste.ts          pasting one table over the cells of another
+│   ├── widths.ts         equal column widths and fitting the table to a width
 │   ├── grid.ts           placing cells with spans on a grid
+│   ├── layout.ts         column width math: scaling, equal widths
 │   ├── properties.ts     property types, and checking colors and alignments
 │   └── cellValue.ts      the tablekit-cell value: checking it, reading and writing it on elements
 ├── styles/
@@ -58,7 +67,8 @@ src/
 │   ├── TablePicker.ts    the size picker
 │   ├── TableMenu.ts      the table menu
 │   ├── tableMenuItems.ts which items the menu shows, and which are disabled
-│   ├── PropertiesPanel.ts the panel with colors and alignment buttons
+│   ├── PropertiesPanel.ts the panel: rows of choices, toggles, text and color buttons
+│   ├── ColorField.ts     a color button that opens the colors and the custom color row under it
 │   ├── propertyFields.ts which fields the cell and table panels show
 │   ├── Popover.ts        the floating box the picker, menu and panel use
 │   ├── toolbarButton.ts  hooking up the table button in the toolbar
@@ -103,12 +113,12 @@ A few things that look odd:
 Changes like inserting a row or merging cells don't touch the page directly. They go like this:
 
 1. Get the table's lines with `quill.getContents(tableStart, tableLength)` and turn them into a `TableModel`. That's a grid, and a merged cell just takes up several spots in it. This is `getTableContext` in `editing/context.ts`.
-2. Change the grid: add a row, merge, split, whatever. Each of these is a small function in `editing/edits.ts`. It changes the model and returns the cell the cursor should go to.
+2. Change the grid: add a row, merge, split, whatever. The changes themselves are functions in `model/` that take the `TableModel`, like `insertRow(model, rowIndex)` in `rowsAndColumns.ts` or `mergeCells(model, area)` in `merging.ts`. `editing/edits.ts` wraps each one in a small function that runs it on the selection and returns the cell the cursor should go to.
 3. Turn the grid back into lines with `toDelta()`, compare that with the old lines, and apply the difference with `updateContents`. That's `commitTable` in `editing/commands.ts`.
 
 If the cursor ends up in the same cell it started in, it keeps its spot in the text. Otherwise it goes to the start of the new cell.
 
-So adding a new table action means writing one function in `edits.ts` and a one-line method in `TableKit.ts` that runs it.
+So adding a new table action means writing the change in `model/`, one function in `edits.ts` and a one-line method in `TableKit.ts` that runs it. The `TableModel` class itself only holds the table and knows how to read and write it, so it doesn't grow with every new action.
 
 Property changes (`editing/properties.ts`) go through the same three steps, but they don't move the cursor. They only change attributes, so the document doesn't get longer or shorter and the selection can stay where it was. That's why the panel can stay open while you click a few things.
 
@@ -120,6 +130,8 @@ Some rules inside the model:
 - After a change, `normalize()` removes rows and columns where no cell starts. Those can't be stored as lines (a row with no cell starting in it has no lines), so they'd disappear the next time the table is read anyway, and leave the spans wrong.
 - A new row extends a merged cell that crosses it, instead of cutting it in two.
 - A new column copies its neighbour's width, then all columns shrink a bit so the table stays the same width.
+- Moving a row first grows the selected rows into a block that no merged cell crosses (`wholeRows` in `model/arrange.ts`). The neighbour is grown the same way, and then the two blocks swap places. Since no merged cell crosses either block, the grid is still valid after the swap. Columns work the same way.
+- Duplicating copies a block like that. A merged cell is copied once and that copy fills all its spots, so it stays merged.
 
 The screen side (`ui/domGrid.ts`) uses the same placing function on the real `<td>` elements. That's how the highlight and the resize line agree with the model on where each cell is.
 
@@ -146,6 +158,24 @@ Paste, cut and typing over a selection don't go through key bindings. `editing/i
 
 Pasted text from the Windows clipboard uses `\r\n`. Quill turns a lone `\r` into a line break without any attributes, which would push the line out of the table, so `\r\n` is changed to `\n` first.
 
+### Up and Down
+
+The browser's own Up and Down in a table follow the screen, not the grid, so with merged cells they can land in odd places. `editing/verticalNavigation.ts` only steps in when the cursor is on the first visual line of its cell (for Up) or the last one (for Down). It checks that by comparing `quill.getBounds()` of the cursor with the start or end of the cell, so lines that wrap count too. Everywhere else the browser moves the cursor inside the cell as usual.
+
+When it steps in, it finds the cell in the next row under the cursor's x position, then asks the browser for the text position at that x on the cell's first or last line (`caretPositionFromPoint`, or `caretRangeFromPoint` in older Chrome and Safari). If that fails, the cursor goes to the start or end of the cell.
+
+## Pasted stripes
+
+A pasted table doesn't say it's striped, it just has colored cells. `findStripes` in `editing/clipboard.ts` looks for the pattern instead: under the header row, every other row has mostly one background, and the rows between don't have it at all. Then the table gets `striped` and that `stripeColor`, and those cells don't keep the color as their own background. One colored row isn't enough to tell stripes from a colored total row, so that needs two, unless it's the default stripe color.
+
+## Captions
+
+A real `<caption>` can't go in the editor: Quill turns every child of a container it doesn't know into a blot, and the table's one UI slot is already the `<colgroup>`. So the caption is a table field like the border color, written on the table as `data-caption`, and the CSS shows it with `table::before { content: attr(data-caption); display: table-caption }`. That's also why you edit it in the panel and can't click into it. `getSemanticHTML()` writes a real `<caption>`, and pasting reads it back from `tableElement.caption`.
+
+## Zoomed editors
+
+When a parent element has `transform: scale()`, `getBoundingClientRect()` gives sizes on screen, but `style.left`, `style.width` and the saved widths are in the element's own pixels. `scaleOf()` in `ui/domGrid.ts` divides the screen width of an element by its `offsetWidth` to get the zoom. The resizers divide mouse distances and measured sizes by it, and `toContainerPosition` uses it to place the handles, the highlight and the bar. Without a transform it's just 1.
+
 ## The toolbar button
 
 Quill only hooks up a toolbar button itself if its name is a registered format or it already has a handler. The full Quill build registers its own `table` format, so there Quill handles the click and calls our handler. In `quill/core` it doesn't, so the module adds the click listener itself. `ui/toolbarButton.ts` checks which case it is so the click isn't handled twice.
@@ -158,11 +188,11 @@ When the module is only registered, not enabled (like for a read-only viewer), `
 
 ## Tests
 
-- `tests/model/`: the model, the grid and the cell value, no editor needed.
-- `tests/ui/`: the column resize math.
-- `tests/editor/`: the module in a real Quill under jsdom. Inserting, toolbar and panel, keyboard, merging and rows/columns, selecting rows and adding paragraphs, properties, clipboard, saved content, cleanup.
+- `tests/model/`: the model, the grid and the cell value, no editor needed. One test file per model file, with shared helpers in `tests/model/modelHelpers.ts` (`tableWithTexts` builds a model from a grid of texts, `textsOf` reads it back).
+- `tests/ui/`: the resize math.
+- `tests/editor/`: the module in a real Quill under jsdom. Inserting, toolbar and panel, the action bar, keyboard, merging and rows/columns, moving and duplicating, selecting rows and adding paragraphs, properties and table style, clipboard, saved content, cleanup.
 
-Shared helpers are in `tests/helpers.ts`. jsdom doesn't do layout, so things like dragging a column or where the highlight sits are checked by hand in the demo in a real browser.
+Shared helpers are in `tests/helpers.ts`. jsdom doesn't do layout, so things like dragging a column, where the highlight sits, Up and Down through wrapped lines, and zoom are checked by hand in the demo in a real browser.
 
 A couple of helpers that aren't obvious from their names:
 

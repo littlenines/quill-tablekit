@@ -1,4 +1,8 @@
+import { setTextAlign, updateCellStyle } from '../model/cellChanges'
 import {
+  normalizeBorderStyle,
+  normalizeCaption,
+  normalizeCellPadding,
   normalizeColor,
   normalizeTableAlign,
   normalizeTextAlign,
@@ -18,22 +22,29 @@ export const changeCellProperties =
   ({ model, selectedArea }) => {
     const selectedCells = model.cellsInArea(selectedArea)
 
-    if (background !== undefined) model.updateCellStyle(selectedCells, { background: normalizeColor(background) })
+    if (background !== undefined) updateCellStyle(selectedCells, { background: normalizeColor(background) })
 
     if (verticalAlign !== undefined) {
-      model.updateCellStyle(selectedCells, { verticalAlign: normalizeVerticalAlign(verticalAlign) })
+      updateCellStyle(selectedCells, { verticalAlign: normalizeVerticalAlign(verticalAlign) })
     }
 
-    if (textAlign !== undefined) model.setTextAlign(selectedCells, normalizeTextAlign(textAlign))
+    if (textAlign !== undefined) setTextAlign(selectedCells, normalizeTextAlign(textAlign))
   }
 
 export const changeTableProperties =
-  ({ header, align, borderColor, background }: Partial<TableProperties>): TableChange =>
+  (changes: Partial<TableProperties>): TableChange =>
   ({ model }) => {
+    const { header, align, borderColor, borderStyle, cellPadding, striped, stripeColor, background, caption } = changes
+
     if (header !== undefined) model.header = header
     if (align !== undefined) model.tableAlign = normalizeTableAlign(align)
     if (borderColor !== undefined) model.borderColor = normalizeColor(borderColor)
-    if (background !== undefined) model.updateCellStyle(allCellsOf(model), { background: normalizeColor(background) })
+    if (borderStyle !== undefined) model.borderStyle = normalizeBorderStyle(borderStyle)
+    if (cellPadding !== undefined) model.cellPadding = normalizeCellPadding(cellPadding)
+    if (striped !== undefined) model.striped = striped
+    if (stripeColor !== undefined) model.stripeColor = normalizeColor(stripeColor)
+    if (caption !== undefined) model.caption = normalizeCaption(caption)
+    if (background !== undefined) updateCellStyle(allCellsOf(model), { background: normalizeColor(background) })
   }
 
 export const readCellProperties = ({ startCell }: TableContext): CellProperties => {
@@ -59,6 +70,11 @@ export const readTableProperties = ({ model }: TableContext): TableProperties =>
     header: model.header,
     align: model.tableAlign ?? 'left',
     borderColor: model.borderColor ?? null,
+    borderStyle: model.borderStyle ?? 'solid',
+    cellPadding: model.cellPadding ?? 'normal',
+    striped: model.striped,
+    stripeColor: model.stripeColor ?? null,
     background: sharedBackground ?? null,
+    caption: model.caption ?? '',
   }
 }
