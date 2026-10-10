@@ -1,3 +1,12 @@
+import {
+  normalizeColor,
+  normalizeTableAlign,
+  normalizeVerticalAlign,
+  withoutEmptyValues,
+  type TableAlign,
+  type VerticalAlign,
+} from './properties'
+
 export interface TableCellValue {
   table: string
   row: string
@@ -5,7 +14,28 @@ export interface TableCellValue {
   rowspan: number
   colspan: number
   widths?: number[]
+  rowHeight?: number
+  header?: boolean
+  tableAlign?: TableAlign
+  borderColor?: string
+  background?: string
+  verticalAlign?: VerticalAlign
 }
+
+export const CELL_DATA_ATTRIBUTES = [
+  'data-table',
+  'data-row',
+  'data-cell',
+  'data-rowspan',
+  'data-colspan',
+  'data-widths',
+  'data-row-height',
+  'data-header',
+  'data-table-align',
+  'data-border-color',
+  'data-background',
+  'data-vertical-align',
+]
 
 export const makeId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`
 
@@ -44,6 +74,12 @@ export const parseWidths = (widthsInput: unknown): number[] | undefined => {
   return widths.map(Math.round)
 }
 
+export const parseRowHeight = (heightInput: unknown): number | undefined => {
+  const height = typeof heightInput === 'string' ? Number.parseFloat(heightInput) : heightInput
+
+  return isPositiveNumber(height) ? Math.round(height) : undefined
+}
+
 export const normalizeCellValue = (cellValueInput: unknown): TableCellValue | null => {
   if (cellValueInput == null || typeof cellValueInput !== 'object') return null
 
@@ -54,15 +90,21 @@ export const normalizeCellValue = (cellValueInput: unknown): TableCellValue | nu
 
   if (!table || !row || !cell) return null
 
-  const widths = parseWidths(fields.widths)
-
   return {
     table,
     row,
     cell,
     rowspan: toSpan(fields.rowspan),
     colspan: toSpan(fields.colspan),
-    ...(widths && { widths }),
+    ...withoutEmptyValues({
+      widths: parseWidths(fields.widths),
+      rowHeight: parseRowHeight(fields.rowHeight),
+      header: fields.header === true || fields.header === 'true' ? true : undefined,
+      tableAlign: normalizeTableAlign(fields.tableAlign),
+      borderColor: normalizeColor(fields.borderColor),
+      background: normalizeColor(fields.background),
+      verticalAlign: normalizeVerticalAlign(fields.verticalAlign),
+    }),
   }
 }
 
@@ -71,24 +113,39 @@ export const setAttribute = (element: HTMLElement, attributeName: string, attrib
   else if (element.getAttribute(attributeName) !== attributeValue) element.setAttribute(attributeName, attributeValue)
 }
 
-export const writeCellValue = (
-  lineElement: HTMLElement,
-  { table, row, cell, rowspan, colspan, widths }: TableCellValue,
-): void => {
+export const writeCellValue = (lineElement: HTMLElement, cellValue: TableCellValue): void => {
+  const { table, row, cell, rowspan, colspan, widths, rowHeight } = cellValue
+  const { header, tableAlign, borderColor, background, verticalAlign } = cellValue
+
   setAttribute(lineElement, 'data-table', table)
   setAttribute(lineElement, 'data-row', row)
   setAttribute(lineElement, 'data-cell', cell)
   setAttribute(lineElement, 'data-rowspan', String(rowspan))
   setAttribute(lineElement, 'data-colspan', String(colspan))
   setAttribute(lineElement, 'data-widths', widths?.length ? widths.join(',') : null)
+  setAttribute(lineElement, 'data-row-height', rowHeight ? String(rowHeight) : null)
+  setAttribute(lineElement, 'data-header', header ? 'true' : null)
+  setAttribute(lineElement, 'data-table-align', tableAlign ?? null)
+  setAttribute(lineElement, 'data-border-color', borderColor ?? null)
+  setAttribute(lineElement, 'data-background', background ?? null)
+  setAttribute(lineElement, 'data-vertical-align', verticalAlign ?? null)
 }
 
-export const readCellValue = (lineElement: HTMLElement) =>
-  normalizeCellValue({
-    table: lineElement.dataset.table,
-    row: lineElement.dataset.row,
-    cell: lineElement.dataset.cell,
-    rowspan: lineElement.dataset.rowspan,
-    colspan: lineElement.dataset.colspan,
-    widths: lineElement.dataset.widths,
+export const readCellValue = (lineElement: HTMLElement) => {
+  const { dataset } = lineElement
+
+  return normalizeCellValue({
+    table: dataset.table,
+    row: dataset.row,
+    cell: dataset.cell,
+    rowspan: dataset.rowspan,
+    colspan: dataset.colspan,
+    widths: dataset.widths,
+    rowHeight: dataset.rowHeight,
+    header: dataset.header,
+    tableAlign: dataset.tableAlign,
+    borderColor: dataset.borderColor,
+    background: dataset.background,
+    verticalAlign: dataset.verticalAlign,
   })
+}

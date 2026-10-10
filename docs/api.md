@@ -19,12 +19,15 @@ The methods work on the table where the cursor is. If the editor doesn't have fo
 
 ## Rows and columns
 
-| Method                                      | What it does                                                                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `insertRowAbove()`, `insertRowBelow()`      | Adds a row above or below the selected cells.                                         |
-| `insertColumnLeft()`, `insertColumnRight()` | Adds a column left or right of the selected cells.                                    |
-| `deleteRow()`                               | Removes every row the selection touches. If that's all of them, the table is removed. |
-| `deleteColumn()`                            | Same, for columns.                                                                    |
+| Method                                             | What it does                                                                                                           |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `insertRowAbove()`, `insertRowBelow()`             | Adds a row above or below the selected cells.                                                                          |
+| `insertColumnLeft()`, `insertColumnRight()`        | Adds a column left or right of the selected cells.                                                                     |
+| `deleteRow()`                                      | Removes every row the selection touches. If that's all of them, the table is removed.                                  |
+| `deleteColumn()`                                   | Same, for columns.                                                                                                     |
+| `selectRow()`, `selectColumn()`                    | Selects every cell in the rows or columns the selection touches.                                                       |
+| `copyTable()`                                      | Copies the whole table to the clipboard as HTML and as tab-separated text. Returns a promise with `true` if it worked. |
+| `insertParagraphAbove()`, `insertParagraphBelow()` | Adds an empty line right before or after the table and moves the cursor there.                                         |
 
 ## Merging
 
@@ -35,14 +38,62 @@ The methods work on the table where the cursor is. If the editor doesn't have fo
 | `canMergeCells()` | `true` if more than one cell is selected. |
 | `canSplitCell()`  | `true` if the cursor is in a merged cell. |
 
-## Column widths
+## Cell and table properties
+
+| Method                        | What it does                                                             |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| `getCellProperties()`         | The properties of the cell the cursor is in, or `null` outside a table.  |
+| `setCellProperties(changes)`  | Changes the selected cells. Only the fields you pass change.             |
+| `getTableProperties()`        | The properties of the table the cursor is in, or `null` outside a table. |
+| `setTableProperties(changes)` | Changes the whole table. Only the fields you pass change.                |
+
+Cell properties:
+
+| Field           | Values                                       | Default  |
+| --------------- | -------------------------------------------- | -------- |
+| `background`    | any CSS color, or `null` for none            | `null`   |
+| `verticalAlign` | `'top'`, `'middle'`, `'bottom'`              | `'top'`  |
+| `textAlign`     | `'left'`, `'center'`, `'right'`, `'justify'` | `'left'` |
+
+Table properties:
+
+| Field         | Values                                                  | Default  |
+| ------------- | ------------------------------------------------------- | -------- |
+| `header`      | `true` makes the first row a header row                 | `false`  |
+| `align`       | `'left'`, `'center'`, `'right'`                         | `'left'` |
+| `borderColor` | any CSS color, or `null` for the default                | `null`   |
+| `background`  | any CSS color, or `null`. Setting it colors every cell. | `null`   |
+
+`getTableProperties()` only gives you a `background` when every cell has the same one. Otherwise it's `null`.
+
+```js
+tableKit.setTableProperties({ header: true, borderColor: '#6fa8dc' })
+tableKit.setCellProperties({ background: '#fff2cc', verticalAlign: 'middle' })
+tableKit.setCellProperties({ background: null })
+```
+
+A value that isn't a valid color or alignment is treated like `null`. Each call is one undo step, and the selection stays where it was.
+
+The types are exported too:
+
+```ts
+import type { CellProperties, TableProperties } from 'quill-tablekit'
+```
+
+## Column widths and row heights
 
 `setColumnWidths(table, widths)` sets the width of every column, in px. `table` is the `<table>` element. Pass `null` instead of the widths to go back to automatic widths.
 
+`setRowHeights(table, heights)` sets the height of each row, in px. Use `null` for a row that should just fit its content, or pass `null` instead of the whole list to reset every row.
+
 ```js
 const table = quill.root.querySelector('table')
+
 tableKit.setColumnWidths(table, [120, 200, 120])
+tableKit.setRowHeights(table, [60, null, null])
 ```
+
+Like dragging, each call is one undo step.
 
 ## Other
 

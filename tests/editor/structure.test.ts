@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellIndex, cellLines, cells, setupWithTable, shape, tables } from '../helpers'
+import { cellIndex, cellLines, cells, setup, setupWithTable, shape, tables } from '../helpers'
 
 describe('merging and splitting', () => {
   it('merges the selected cells and keeps their text', () => {
@@ -151,5 +151,42 @@ describe('column widths', () => {
 
     expect(cellLines(quill).some((cellValue) => cellValue.widths)).toBe(false)
     expect(tables(quill)[0].style.width).toBe('')
+  })
+})
+
+describe('row heights', () => {
+  it('stores row heights in the Delta and sets them on the rows', () => {
+    const { quill, tableKit } = setupWithTable(2, 1)
+
+    tableKit.setRowHeights(tables(quill)[0], [60, null])
+
+    expect(cellLines(quill).map((cellValue) => cellValue.rowHeight)).toEqual([60, undefined])
+    expect([...tables(quill)[0].rows].map((rowElement) => rowElement.style.height)).toEqual(['60px', ''])
+  })
+
+  it('undoes a height change in one step', () => {
+    const { quill, tableKit } = setupWithTable(2, 1)
+
+    quill.history.cutoff()
+    tableKit.setRowHeights(tables(quill)[0], [60, 80])
+    quill.history.undo()
+
+    expect(tables(quill)[0].rows[0].hasAttribute('style')).toBe(false)
+  })
+
+  it('exports row heights and reads them back when pasted', () => {
+    const { quill, tableKit } = setupWithTable(2, 1)
+
+    tableKit.setRowHeights(tables(quill)[0], [60, null])
+
+    const html = quill.getSemanticHTML()
+
+    expect(html).toContain('<tr style="height: 60px;">')
+
+    const target = setup()
+
+    target.quill.clipboard.dangerouslyPasteHTML(html)
+
+    expect(cellLines(target.quill).map((cellValue) => cellValue.rowHeight)).toEqual([60, undefined])
   })
 })

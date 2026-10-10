@@ -1,5 +1,12 @@
-import { CELL_FORMAT } from '../config/constants'
-import { makeId, parseWidths, type TableCellValue } from '../model/cellValue'
+import { CELL_FORMAT, HEADER_BACKGROUND } from '../config/constants'
+import { makeId, parseRowHeight, parseWidths, type TableCellValue } from '../model/cellValue'
+import {
+  normalizeColor,
+  normalizeTableAlign,
+  normalizeVerticalAlign,
+  withoutEmptyValues,
+  type TableAlign,
+} from '../model/properties'
 import { Delta, Parchment, type ParchmentTypes } from '../utils/quill'
 
 type Scroll = ParchmentTypes.ScrollBlot
@@ -72,6 +79,34 @@ export const endsWithLineBreak = (content: Delta): boolean => {
 export const hasTableLines = (content: Delta): boolean =>
   content.ops.some((operation) => operation.attributes?.[CELL_FORMAT] != null)
 
+const hasHeaderRow = (tableElement: HTMLTableElement): boolean => {
+  const firstRowCells = [...(tableElement.rows[0]?.cells ?? [])]
+
+  return (
+    tableElement.tHead != null || (firstRowCells.length > 0 && firstRowCells.every(({ tagName }) => tagName === 'TH'))
+  )
+}
+
+const readTableAlign = ({ style, align }: HTMLTableElement): TableAlign | undefined => {
+  if (style.marginLeft === 'auto') return style.marginRight === 'auto' ? 'center' : 'right'
+
+  return normalizeTableAlign(align.toLowerCase())
+}
+
+const withoutBackground = (content: Delta, cellBackground: string | undefined): Delta => {
+  if (!cellBackground) return content
+
+  return new Delta(
+    content.ops.map(({ attributes, ...operation }) => {
+      if (attributes?.background !== cellBackground) return attributes ? { ...operation, attributes } : operation
+
+      const { background: _textBackground, ...otherAttributes } = attributes
+
+      return Object.keys(otherAttributes).length > 0 ? { ...operation, attributes: otherAttributes } : operation
+    }),
+  )
+}
+
 export const matchTableCell = (cellNode: Node, cellContent: Delta, scroll: Scroll): Delta => {
   const cellElement = cellNode as HTMLTableCellElement
   const rowElement = cellElement.closest('tr')
@@ -79,18 +114,28 @@ export const matchTableCell = (cellNode: Node, cellContent: Delta, scroll: Scrol
 
   if (!rowElement || !tableElement) return cellContent
 
+  const isHeaderTable = hasHeaderRow(tableElement)
+  const isHeaderCell = isHeaderTable && rowElement === tableElement.rows[0]
+  const pastedBackground = normalizeColor(cellElement.style.backgroundColor || cellElement.getAttribute('bgcolor'))
+  const background = isHeaderCell && pastedBackground === HEADER_BACKGROUND ? undefined : pastedBackground
   const cellValue: TableCellValue = {
     table: idForElement(pastedTableIds, tableElement, 'tbl'),
     row: idForElement(pastedRowIds, rowElement, 'row'),
     cell: makeId('cell'),
     rowspan: Math.max(1, cellElement.rowSpan || 1),
     colspan: Math.max(1, cellElement.colSpan || 1),
+    ...withoutEmptyValues({
+      widths: readColumnWidths(tableElement),
+      rowHeight: parseRowHeight(rowElement.style.height || rowElement.getAttribute('height')),
+      header: isHeaderTable || undefined,
+      tableAlign: readTableAlign(tableElement),
+      borderColor: normalizeColor(tableElement.style.borderColor),
+      background,
+      verticalAlign: normalizeVerticalAlign(cellElement.style.verticalAlign || cellElement.getAttribute('valign')),
+    }),
   }
-  const columnWidths = readColumnWidths(tableElement)
 
-  if (columnWidths) cellValue.widths = columnWidths
-
-  return toCellLines(cellContent, cellValue, scroll)
+  return toCellLines(withoutBackground(cellContent, pastedBackground), cellValue, scroll)
 }
 
 export const matchTableRow = (_rowNode: Node, rowContent: Delta): Delta =>

@@ -2,7 +2,8 @@ import type Quill from 'quill'
 import type { Range } from 'quill'
 import type Keyboard from 'quill/modules/keyboard'
 import { TableCellLine } from '../blots'
-import { deleteSelection, isInTable, lineAt, needsTableAwareDelete } from './selection'
+import { deleteSelectedContent } from './commands'
+import { isInTable, lineAt } from './selection'
 
 type KeyBinding = Exclude<Parameters<Keyboard['addBinding']>[0], string | number> & { key: string }
 
@@ -24,12 +25,7 @@ const addPriorityBinding = (keyboard: Keyboard, binding: KeyBinding): void => {
 export const installKeyboard = (quill: Quill, moveToCell: (direction: 1 | -1) => boolean): void => {
   const { keyboard } = quill
 
-  const deleteSelectionIfItSpansCells = (range: Range): boolean => {
-    if (!needsTableAwareDelete(quill, range)) return true
-
-    deleteSelection(quill, range)
-    return false
-  }
+  const deleteSelectionIfItSpansCells = (range: Range): boolean => !deleteSelectedContent(quill, range)
 
   addPriorityBinding(keyboard, {
     key: 'Tab',

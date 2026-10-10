@@ -15,3 +15,6 @@ export const CLASS_NAMES = {
   body: 'qlt-body',
   table: 'qlt-table',
 } as const
+
+export const HEADER_BACKGROUND = '#f3f4f6'
+export const MIN_ROW_HEIGHT = 20

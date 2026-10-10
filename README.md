@@ -6,9 +6,9 @@
 
 A [Quill](https://quilljs.com/) 2 module for tables you can actually edit.
 
-Click the table button in the toolbar and pick the size from a grid, or type it in for bigger tables. Inside a table you can add and remove rows and columns, merge and split cells, and drag cell borders to resize columns. Right-click any cell for the table menu.
+Click the table button in the toolbar and pick the size from a grid, or type it in for bigger tables. Inside a table you can add and remove rows and columns, merge and split cells, resize columns, rows and the whole table by dragging, turn on a header row, and color and align cells. While the cursor is in a table, a small bar with buttons for all of this shows up next to it.
 
-Tables are saved in the normal Quill Delta, so `getContents()` and `setContents()` keep them exactly as they are, including merged cells and column widths. Undo works, and tables pasted from Word, Google Docs or a web page become real tables.
+Tables are saved in the normal Quill Delta, so `getContents()` and `setContents()` keep them exactly as they are, including merged cells, column widths, the header row and cell colors. Undo works, and tables pasted from Word, Google Docs or a web page become real tables.
 
 Pairs well with [`resize-quill-image`](https://www.npmjs.com/package/resize-quill-image) and [`quill-image-alt`](https://www.npmjs.com/package/quill-image-alt). All three can be registered on the same Quill instance, and images inside cells can be resized and get alt text.
 
@@ -24,12 +24,17 @@ Pairs well with [`resize-quill-image`](https://www.npmjs.com/package/resize-quil
   - [Configure the Quill editor](#3-configure-the-quill-editor)
 - [How it works](#how-it-works)
   - [Inserting a table](#inserting-a-table)
+  - [The action bar](#the-action-bar)
   - [The table menu](#the-table-menu)
   - [Merging cells](#merging-cells)
-  - [Resizing columns](#resizing-columns)
+  - [Copy and paste](#copy-and-paste)
+  - [Header row](#header-row)
+  - [Cell and table properties](#cell-and-table-properties)
+  - [Resizing](#resizing)
   - [Keyboard](#keyboard)
 - [Options](#options)
   - [Option Descriptions](#option-descriptions)
+  - [Menu items](#menu-items)
   - [Labels](#labels)
   - [Colors](#colors)
 - [Saving and showing content](#saving-and-showing-content)
@@ -47,8 +52,6 @@ Pairs well with [`resize-quill-image`](https://www.npmjs.com/package/resize-quil
 ---
 
 ## [Demo](#demo)
-
-
 
 ## [Installation](#installation)
 
@@ -149,16 +152,26 @@ The CSS is added for you, there's nothing else to import.
 - **For bigger tables**, type the rows and columns in the two boxes under the grid and press Insert (up to 100 × 30 by default).
 - The table goes under the line you're on. If that line is empty, the table takes its place.
 
+### [The action bar](#the-action-bar)
+
+While the cursor is in a table, a small bar shows up next to it with buttons for **Rows** and **Columns** (each opens a short menu), **Merge / Split** (it switches depending on what's selected), **Header row**, **Cell properties**, **Table properties**, **More** and **Delete table**. Hover a button to see its name.
+
+The bar follows the cell you click: it sits just above that cell's row (or just below it at the top of the editor), so it never covers what you're editing. Escape hides it until you click into another cell. Set `actionBar: false` to turn it off.
+
 ### [The table menu](#the-table-menu)
 
-Click the table button while the cursor is in a table, or **right-click any cell**. You get:
+Click the table button in the toolbar while the cursor is in a table to get every action in one list:
 
 - Insert row above / below
 - Insert column left / right
+- Insert paragraph above / below the table
+- Select row / column, Copy table
 - Merge cells / Split cell
+- Header row
+- Cell properties / Table properties
 - Delete row / column / table
 
-Every action can be undone with a single undo.
+Every action can be undone with a single undo. If a table is the first thing in the document, **Insert paragraph above table** is how you get a line above it. If you don't need all of these, the [`menu` option](#menu-items) picks which ones show.
 
 ### [Merging cells](#merging-cells)
 
@@ -166,14 +179,35 @@ Select across cells by dragging, or click in one cell and **Shift+click** in ano
 
 **Split cell** undoes it. The text stays in the top-left cell and the others are empty.
 
-### [Resizing columns](#resizing-columns)
+**Select row** and **Select column** select every cell in the row or column, so you can merge or delete them in one go.
 
-Move the mouse onto a vertical border between cells, and a blue line shows up. Drag it.
+### [Copy and paste](#copy-and-paste)
 
-- Dragging a border **inside** the table moves width from one column to its neighbour, so the table stays the same size.
-- Dragging the **right edge** of the table makes the whole table wider or narrower.
+- **Ctrl+C on several cells** copies exactly the highlighted block, as an HTML table and as tab-separated text, so it pastes cell by cell into Excel or Google Sheets. **Copy table** in the menu copies the whole table.
+- **Pasting a table while the cursor is in a cell** overwrites the cells from there, going right and down, and adds rows and columns if they don't fit.
+- **Backspace, Delete, cut or typing** with several cells selected empties those cells and keeps the table.
 
-The widths are saved in the Delta.
+### [Header row](#header-row)
+
+**Header row** makes the first row bold with a light gray background. Click it again to turn it off. In the HTML from `getSemanticHTML()`, those cells come out as `<th>`.
+
+### [Cell and table properties](#cell-and-table-properties)
+
+**Cell properties** opens a small panel for the selected cells: background color, vertical alignment (top, middle, bottom) and text alignment (left, center, right, justify).
+
+**Table properties** works on the whole table: its alignment on the page, the border color, and a background for every cell.
+
+Under each set of colors you can pick any other color with the color picker, or type one in (`#1f6feb`, `rgb(...)`, `teal`) and press Enter.
+
+Every click changes the table right away, and the panel stays open so you can change a few things in a row. Press Escape or click outside to close it.
+
+### [Resizing](#resizing)
+
+- **Columns:** drag a vertical border between cells. A border inside the table moves width between two columns, and the right edge makes the whole table wider or narrower.
+- **Rows:** drag a horizontal border between rows to make the row above it taller. A row still grows when its text needs more room.
+- **The whole table:** hover a table and drag the round handle at its bottom-right corner. The columns keep their proportions, and the height is split evenly over the rows.
+
+While you drag, only a guide line or a dashed outline moves, and the table changes when you let go. A table can't be dragged wider than the editor: the guide turns red when you reach that point. Widths and heights are saved in the Delta, and each drag is one undo step.
 
 ### [Keyboard](#keyboard)
 
@@ -196,28 +230,40 @@ tableKit: {
   pickerColumns: 10,
   maxRows: 100,
   maxColumns: 30,
-  contextMenu: true,
+  contextMenu: false,
+  actionBar: true,
   resizable: true,
   minColumnWidth: 40,
+  menu: ['insertRowBelow', 'insertColumnRight', 'mergeCells', 'splitCell', 'deleteTable'],
+  colors: ['#ffffff', '#fff2cc', '#d9ead3', '#cfe2f3'],
 }
 ```
 
 ### [Option Descriptions](#option-descriptions)
 
-| Option           | Type      | Default | Description                                                                         |
-| ---------------- | --------- | ------- | ----------------------------------------------------------------------------------- |
-| `pickerRows`     | `number`  | `8`     | Rows in the size picker grid.                                                       |
-| `pickerColumns`  | `number`  | `10`    | Columns in the size picker grid.                                                    |
-| `maxRows`        | `number`  | `100`   | Most rows you can insert at once.                                                   |
-| `maxColumns`     | `number`  | `30`    | Most columns you can insert at once.                                                |
-| `contextMenu`    | `boolean` | `true`  | Right-click on a cell opens the table menu. The toolbar button opens it either way. |
-| `resizable`      | `boolean` | `true`  | Lets you drag cell borders to resize columns.                                       |
-| `minColumnWidth` | `number`  | `40`    | Narrowest a column can be dragged, in px.                                           |
-| `labels`         | `object`  | English | The text in the picker and the menu. See [Labels](#labels).                         |
+| Option           | Type      | Default    | Description                                                               |
+| ---------------- | --------- | ---------- | ------------------------------------------------------------------------- |
+| `pickerRows`     | `number`  | `8`        | Rows in the size picker grid.                                             |
+| `pickerColumns`  | `number`  | `10`       | Columns in the size picker grid.                                          |
+| `maxRows`        | `number`  | `100`      | Most rows you can insert at once.                                         |
+| `maxColumns`     | `number`  | `30`       | Most columns you can insert at once.                                      |
+| `contextMenu`    | `boolean` | `false`    | Right-click on a cell opens the table menu instead of the browser's menu. |
+| `actionBar`      | `boolean` | `true`     | Shows the bar with buttons next to the table while the cursor is in it.   |
+| `resizable`      | `boolean` | `true`     | Lets you resize columns, rows and the whole table by dragging.            |
+| `minColumnWidth` | `number`  | `40`       | Narrowest a column can be dragged, in px.                                 |
+| `menu`           | `array`   | every item | Which items the table menu shows. See [Menu items](#menu-items).          |
+| `colors`         | `array`   | 15 colors  | The colors in the properties panel. Any CSS color works.                  |
+| `labels`         | `object`  | English    | The text in the picker, the menu and the panel. See [Labels](#labels).    |
+
+### [Menu items](#menu-items)
+
+Pass the items you want, and the rest are hidden. They always show in the same order:
+
+`insertRowAbove` · `insertRowBelow` · `insertColumnLeft` · `insertColumnRight` · `insertParagraphAbove` · `insertParagraphBelow` · `selectRow` · `selectColumn` · `copyTable` · `mergeCells` · `splitCell` · `headerRow` · `cellProperties` · `tableProperties` · `deleteRow` · `deleteColumn` · `deleteTable`
 
 ### [Labels](#labels)
 
-Every text in the picker and the menu can be changed, for example to translate it. Only pass the ones you want to change:
+Every text in the picker, the menu and the panel can be changed, for example to translate it. Only pass the ones you want to change:
 
 ```js
 tableKit: {
@@ -229,19 +275,22 @@ tableKit: {
 }
 ```
 
-The keys are `insertTable`, `customSize`, `rowsInput`, `columnsInput`, `insertButton`, `insertRowAbove`, `insertRowBelow`, `insertColumnLeft`, `insertColumnRight`, `mergeCells`, `splitCell`, `deleteRow`, `deleteColumn` and `deleteTable`. The full list with the default texts is in [Options](https://github.com/littlenines/quill-tablekit/blob/master/docs/options.md#labels).
+Each menu item above has a label with the same name. The picker, the panel and the action bar have a few more: `insertTable`, `customSize`, `rowsInput`, `columnsInput`, `insertButton`, `background`, `borderColor`, `noColor`, `customColor`, `colorCode`, `textAlign`, `verticalAlign`, `tableAlign`, `alignLeft`, `alignCenter`, `alignRight`, `alignJustify`, `alignTop`, `alignMiddle`, `alignBottom`, `actionBar`, `rowsGroup`, `columnsGroup` and `moreGroup`. The full list with the default texts is in [Options](https://github.com/littlenines/quill-tablekit/blob/master/docs/options.md#labels).
 
 ### [Colors](#colors)
 
-The colors come from three CSS variables. Set them on the editor container:
+The module's own colors come from four CSS variables. Set them on the editor container:
 
 ```css
 .ql-container {
   --qlt-accent: #7c3aed; /* outline of selected cells, resize line, buttons */
   --qlt-selection-bg: rgba(124, 58, 237, 0.12); /* background of selected cells */
   --qlt-border: #d4d4d8; /* cell borders */
+  --qlt-header-bg: #ede9fe; /* background of the header row */
 }
 ```
+
+Colors picked in the properties panel win over these.
 
 ---
 
@@ -262,7 +311,7 @@ const viewer = new Quill('#article', { readOnly: true, modules: { toolbar: false
 viewer.setContents(delta)
 ```
 
-If you need HTML, use `quill.getSemanticHTML()`. It gives you a clean `<table>` with `colspan`, `rowspan` and column widths. Other Delta-to-HTML libraries don't know the table format.
+If you need HTML, use `quill.getSemanticHTML()`. It gives you a clean `<table>` with `colspan`, `rowspan`, column widths, `<th>` for the header row and the cell colors as inline styles. Other Delta-to-HTML libraries don't know the table format.
 
 More on this, including what the Delta looks like, in [Saved content](https://github.com/littlenines/quill-tablekit/blob/master/docs/content.md).
 
@@ -298,22 +347,30 @@ const tableKit = quill.getModule('tableKit')
 
 tableKit.insertTable(3, 4)
 tableKit.mergeCells()
+tableKit.setTableProperties({ header: true, borderColor: '#6fa8dc' })
+tableKit.setCellProperties({ background: '#fff2cc', verticalAlign: 'middle' })
 
 quill.on('selection-change', () => {
   mergeButton.disabled = !tableKit.canMergeCells()
 })
 ```
 
-| Method                                             | What it does                                           |
-| -------------------------------------------------- | ------------------------------------------------------ |
-| `insertTable(rows, columns)`                       | Adds a table at the cursor.                            |
-| `insertRowAbove()`, `insertRowBelow()`             | Adds a row.                                            |
-| `insertColumnLeft()`, `insertColumnRight()`        | Adds a column.                                         |
-| `deleteRow()`, `deleteColumn()`, `deleteTable()`   | Removes the selected rows, columns or the table.       |
-| `mergeCells()`, `splitCell()`                      | Merges the selected cells, or splits a merged one.     |
-| `canMergeCells()`, `canSplitCell()`, `isInTable()` | Tells you what's possible right now.                   |
-| `setColumnWidths(table, widths)`                   | Sets the column widths in px, or `null` for automatic. |
-| `destroy()`                                        | Cleans up. See [Cleanup / Destroy](#cleanup--destroy). |
+| Method                                                | What it does                                                                          |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `insertTable(rows, columns)`                          | Adds a table at the cursor.                                                           |
+| `insertRowAbove()`, `insertRowBelow()`                | Adds a row.                                                                           |
+| `insertColumnLeft()`, `insertColumnRight()`           | Adds a column.                                                                        |
+| `insertParagraphAbove()`, `insertParagraphBelow()`    | Adds an empty line before or after the table.                                         |
+| `selectRow()`, `selectColumn()`                       | Selects the whole row or column.                                                      |
+| `copyTable()`                                         | Copies the whole table to the clipboard.                                              |
+| `deleteRow()`, `deleteColumn()`, `deleteTable()`      | Removes the selected rows, columns or the table.                                      |
+| `mergeCells()`, `splitCell()`                         | Merges the selected cells, or splits a merged one.                                    |
+| `canMergeCells()`, `canSplitCell()`, `isInTable()`    | Tells you what's possible right now.                                                  |
+| `getCellProperties()`, `setCellProperties(changes)`   | Reads or changes background, vertical and text alignment of the selected cells.       |
+| `getTableProperties()`, `setTableProperties(changes)` | Reads or changes the header row, alignment, border color and background of the table. |
+| `setColumnWidths(table, widths)`                      | Sets the column widths in px, or `null` for automatic.                                |
+| `setRowHeights(table, heights)`                       | Sets the row heights in px, or `null` for automatic.                                  |
+| `destroy()`                                           | Cleans up. See [Cleanup / Destroy](#cleanup--destroy).                                |
 
 The full list is in [API](https://github.com/littlenines/quill-tablekit/blob/master/docs/api.md).
 
@@ -325,13 +382,17 @@ This package ships TypeScript definitions. The option types are exported for use
 
 ```ts
 import TableKit from 'quill-tablekit'
-import type { TableKitOptions, TableKitLabels } from 'quill-tablekit'
+import type { TableKitOptions, TableKitLabels, TableMenuItemName, CellProperties } from 'quill-tablekit'
 
 const labels: Partial<TableKitLabels> = { mergeCells: 'Zellen verbinden' }
+const menu: TableMenuItemName[] = ['mergeCells', 'splitCell', 'cellProperties']
+const highlight: Partial<CellProperties> = { background: '#fff2cc' }
 
-const options: TableKitOptions = { pickerRows: 6, maxColumns: 12, labels }
+const options: TableKitOptions = { pickerRows: 6, maxColumns: 12, menu, labels }
 
 const tableKit = quill.getModule('tableKit') as TableKit
+
+tableKit.setCellProperties(highlight)
 ```
 
 ---
@@ -388,6 +449,14 @@ useEffect(() => {
 ### <ins>Problem: The table button does nothing, or opens the wrong thing</ins>
 
 Check that Quill's own `table` module is not turned on in `modules`. Both use the `table` toolbar button, so only use `tableKit`.
+
+### <ins>Problem: The table menu is too long</ins>
+
+It has 17 items. Use the [`menu` option](#menu-items) to keep only the ones you need. If the editor has a fixed height, a menu that doesn't fit gets its own scroll bar.
+
+### <ins>Problem: Table alignment does nothing</ins>
+
+A new table is as wide as the editor, so there's nothing to align. Resize a column to make the table narrower, then pick center or right in **Table properties**.
 
 ### <ins>Problem: Headers, lists or quotes don't work inside a cell</ins>
 

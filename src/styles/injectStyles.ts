@@ -4,7 +4,13 @@ const STYLE_ELEMENT_ID = 'quill-tablekit-styles'
 
 export const injectStyles = (): void => {
   if (typeof document === 'undefined') return
-  if (document.getElementById(STYLE_ELEMENT_ID)) return
+
+  const existingStyle = document.getElementById(STYLE_ELEMENT_ID)
+
+  if (existingStyle) {
+    if (existingStyle.textContent !== CSS) existingStyle.textContent = CSS
+    return
+  }
 
   const style = document.createElement('style')
 

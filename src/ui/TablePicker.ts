@@ -19,6 +19,7 @@ export class TablePicker {
   #onSelect: (rowCount: number, columnCount: number) => void
   #gridButtons: HTMLButtonElement[] = []
   #sizeLabel: HTMLDivElement
+  #highlightedSize: [rowCount: number, columnCount: number] = [0, 0]
   #rowsInput: HTMLInputElement
   #columnsInput: HTMLInputElement
 
@@ -47,6 +48,12 @@ export class TablePicker {
     }
 
     grid.addEventListener('mouseleave', () => this.#highlightSize(0, 0))
+    grid.addEventListener('mousedown', (event) => event.preventDefault())
+    grid.addEventListener('click', (event) => {
+      const [rowCount, columnCount] = this.#highlightedSize
+
+      if (event.target === grid && rowCount > 0) this.#choose(rowCount, columnCount)
+    })
 
     this.#sizeLabel = createElement('div', { className: 'qlt-picker-label', textContent: labels.insertTable })
     this.#rowsInput = this.#createNumberInput(labels.rowsInput, maxRows)
@@ -125,6 +132,8 @@ export class TablePicker {
   }
 
   #highlightSize(rowCount: number, columnCount: number): void {
+    this.#highlightedSize = [rowCount, columnCount]
+
     for (const gridButton of this.#gridButtons) {
       const isInsideSize =
         Number(gridButton.dataset.rows) <= rowCount && Number(gridButton.dataset.columns) <= columnCount

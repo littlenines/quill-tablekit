@@ -1,10 +1,11 @@
-import Quill from 'quill'
-import { TableContainer } from '../blots'
+import type Quill from 'quill'
 import { cellAreas } from '../model/grid'
+import type { TableAlign } from '../model/properties'
 import { createElement } from './dom'
-import { measureColumnWidths, tableGrid, toContainerPosition } from './domGrid'
+import { followMouseUntilRelease, isPastWidthLimit, showPastLimit } from './dragging'
+import { editorContentWidth, measureColumnWidths, tableAlignmentOf, tableGrid, toContainerPosition } from './domGrid'
 
-const EDGE_GRAB_DISTANCE = 5
+const EDGE_GRAB_DISTANCE = 6
 
 interface HoveredEdge {
   tableElement: HTMLTableElement
@@ -12,12 +13,28 @@ interface HoveredEdge {
 }
 
 interface ActiveDrag extends HoveredEdge {
+  alignment: TableAlign
+  startTableBox: DOMRect
   startClientX: number
   startWidths: number[]
   currentWidths: number[]
 }
 
 const sumOf = (numbers: number[]) => numbers.reduce((total, number) => total + number, 0)
+
+const canDragEdge = (edgeIndex: number, columnCount: number, alignment: TableAlign): boolean => {
+  if (edgeIndex === 0) return alignment !== 'left'
+  if (edgeIndex === columnCount) return alignment !== 'right'
+
+  return true
+}
+
+export const tableLeftAfterResize = (startTableBox: DOMRect, alignment: TableAlign, newTotalWidth: number): number => {
+  if (alignment === 'center') return startTableBox.left + (startTableBox.width - newTotalWidth) / 2
+  if (alignment === 'right') return startTableBox.right - newTotalWidth
+
+  return startTableBox.left
+}
 
 export class ColumnResizer {
   #quill: Quill
@@ -50,7 +67,7 @@ export class ColumnResizer {
   }
 
   destroy(): void {
-    this.#stopDrag()
+    this.#dragListeners?.abort()
     this.#listeners.abort()
     this.#handle.remove()
   }
@@ -58,9 +75,11 @@ export class ColumnResizer {
   #showHandleNearEdge = (event: MouseEvent): void => {
     if (this.#activeDrag || event.target === this.#handle) return
 
-    this.#hoveredEdge = this.#quill.isEnabled() ? this.#findEdgeUnderMouse(event) : null
+    const hoveredEdge = this.#quill.isEnabled() ? this.#findEdgeUnderMouse(event) : null
 
-    if (this.#hoveredEdge) this.#placeHandle(this.#hoveredEdge.tableElement, this.#edgeClientX(this.#hoveredEdge))
+    this.#hoveredEdge = hoveredEdge?.edge ?? null
+
+    if (hoveredEdge) this.#placeHandle(hoveredEdge.edge.tableElement, hoveredEdge.edgeClientX)
     else this.#handle.style.display = 'none'
   }
 
@@ -71,29 +90,36 @@ export class ColumnResizer {
     this.#handle.style.display = 'none'
   }
 
-  #findEdgeUnderMouse(event: MouseEvent): HoveredEdge | null {
+  #findEdgeUnderMouse(event: MouseEvent): { edge: HoveredEdge; edgeClientX: number } | null {
     const hoveredElement = event.target instanceof Element ? event.target : null
     const cellElement = hoveredElement?.closest<HTMLTableCellElement>('td.qlt-cell')
-    const tableElement = cellElement?.closest('table')
 
-    if (!cellElement || !tableElement || !this.#quill.root.contains(cellElement)) return null
-
-    const cellArea = cellAreas(tableGrid(tableElement)).get(cellElement)
-
-    if (!cellArea) return null
+    if (!cellElement || !this.#quill.root.contains(cellElement)) return null
 
     const cellBox = cellElement.getBoundingClientRect()
     const isNearRightEdge = Math.abs(event.clientX - cellBox.right) <= EDGE_GRAB_DISTANCE
-    const isNearLeftEdge = cellArea.left > 0 && Math.abs(event.clientX - cellBox.left) <= EDGE_GRAB_DISTANCE
+    const isNearLeftEdge = Math.abs(event.clientX - cellBox.left) <= EDGE_GRAB_DISTANCE
 
-    if (isNearRightEdge) return { tableElement, edgeIndex: cellArea.right }
-    if (isNearLeftEdge) return { tableElement, edgeIndex: cellArea.left }
+    if (!isNearRightEdge && !isNearLeftEdge) return null
+
+    const tableElement = cellElement.closest('table')
+    const grid = tableElement && tableGrid(tableElement)
+    const cellArea = grid && cellAreas(grid).get(cellElement)
+
+    if (!tableElement || !grid || !cellArea) return null
+
+    const columnCount = grid[0]?.length ?? 0
+    const alignment = tableAlignmentOf(tableElement)
+
+    if (isNearRightEdge && canDragEdge(cellArea.right, columnCount, alignment)) {
+      return { edge: { tableElement, edgeIndex: cellArea.right }, edgeClientX: cellBox.right }
+    }
+
+    if (isNearLeftEdge && canDragEdge(cellArea.left, columnCount, alignment)) {
+      return { edge: { tableElement, edgeIndex: cellArea.left }, edgeClientX: cellBox.left }
+    }
 
     return null
-  }
-
-  #edgeClientX({ tableElement, edgeIndex }: HoveredEdge, columnWidths = measureColumnWidths(tableGrid(tableElement))) {
-    return tableElement.getBoundingClientRect().left + sumOf(columnWidths.slice(0, edgeIndex))
   }
 
   #placeHandle(tableElement: HTMLTableElement, edgeClientX: number): void {
@@ -102,7 +128,7 @@ export class ColumnResizer {
 
     Object.assign(this.#handle.style, {
       display: 'block',
-      left: `${left - 3}px`,
+      left: `${left - 5}px`,
       top: `${top}px`,
       height: `${tableBox.height}px`,
     })
@@ -113,18 +139,19 @@ export class ColumnResizer {
 
     event.preventDefault()
 
-    const startWidths = measureColumnWidths(tableGrid(this.#hoveredEdge.tableElement))
+    const { tableElement } = this.#hoveredEdge
+    const startWidths = measureColumnWidths(tableGrid(tableElement))
 
-    this.#activeDrag = { ...this.#hoveredEdge, startClientX: event.clientX, startWidths, currentWidths: startWidths }
+    this.#activeDrag = {
+      ...this.#hoveredEdge,
+      alignment: tableAlignmentOf(tableElement),
+      startTableBox: tableElement.getBoundingClientRect(),
+      startClientX: event.clientX,
+      startWidths,
+      currentWidths: startWidths,
+    }
     this.#handle.classList.add('is-dragging')
-    document.body.classList.add('qlt-resizing')
-
-    this.#dragListeners = new AbortController()
-
-    const { signal } = this.#dragListeners
-
-    document.addEventListener('mousemove', this.#followMouse, { signal })
-    document.addEventListener('mouseup', this.#finishDrag, { signal })
+    this.#dragListeners = followMouseUntilRelease('qlt-resizing', this.#followMouse, this.#finishDrag)
   }
 
   #followMouse = (event: MouseEvent): void => {
@@ -132,37 +159,34 @@ export class ColumnResizer {
 
     if (!drag) return
 
-    const dragDistance = event.clientX - drag.startClientX
+    const isOuterEdge = drag.edgeIndex === 0 || drag.edgeIndex === drag.startWidths.length
+    const growsOnBothSides = isOuterEdge && drag.alignment === 'center'
+    const dragDistance = (event.clientX - drag.startClientX) * (growsOnBothSides ? 2 : 1)
+    const widthGrowth = drag.edgeIndex === 0 ? -dragDistance : dragDistance
 
-    drag.currentWidths = resizeColumns(drag.startWidths, drag.edgeIndex, dragDistance, this.#minWidth)
+    const maxTableWidth = editorContentWidth(this.#quill)
 
-    const tableBlot = Quill.find(drag.tableElement)
+    drag.currentWidths = resizeColumns(drag.startWidths, drag.edgeIndex, dragDistance, this.#minWidth, maxTableWidth)
+    showPastLimit(isOuterEdge && isPastWidthLimit(drag.startWidths, widthGrowth, maxTableWidth), this.#handle)
 
-    if (tableBlot instanceof TableContainer) tableBlot.preview(drag.currentWidths)
+    const tableLeft = tableLeftAfterResize(drag.startTableBox, drag.alignment, sumOf(drag.currentWidths))
 
-    this.#placeHandle(drag.tableElement, this.#edgeClientX(drag, drag.currentWidths))
+    this.#placeHandle(drag.tableElement, tableLeft + sumOf(drag.currentWidths.slice(0, drag.edgeIndex)))
   }
 
   #finishDrag = (): void => {
     const drag = this.#activeDrag
 
-    this.#stopDrag()
+    this.#activeDrag = null
+    this.#hoveredEdge = null
+    this.#handle.classList.remove('is-dragging', 'is-past-limit')
+    this.#handle.style.display = 'none'
 
     if (!drag) return
 
-    const tableBlot = Quill.find(drag.tableElement)
     const widthsChanged = drag.currentWidths.some((width, columnIndex) => width !== drag.startWidths[columnIndex])
 
-    if (tableBlot instanceof TableContainer) tableBlot.preview(null)
     if (widthsChanged) this.#saveWidths(drag.tableElement, drag.currentWidths)
-  }
-
-  #stopDrag(): void {
-    this.#activeDrag = null
-    this.#dragListeners?.abort()
-    this.#dragListeners = null
-    this.#handle.classList.remove('is-dragging')
-    document.body.classList.remove('qlt-resizing')
   }
 }
 
@@ -171,15 +195,26 @@ export const resizeColumns = (
   edgeIndex: number,
   dragDistance: number,
   minWidth: number,
+  maxTableWidth = Infinity,
 ): number[] => {
   const newWidths = [...startWidths]
   const leftColumn = edgeIndex - 1
   const rightColumn = edgeIndex
+  const roomToGrow = Math.max(0, maxTableWidth - sumOf(startWidths))
+
+  if (edgeIndex === 0 && newWidths.length > 0) {
+    const draggedWidth = Math.round(startWidths[0] - dragDistance)
+
+    newWidths[0] = Math.max(minWidth, Math.min(draggedWidth, startWidths[0] + roomToGrow))
+    return newWidths
+  }
 
   if (leftColumn < 0 || leftColumn >= newWidths.length) return newWidths
 
   if (rightColumn === newWidths.length) {
-    newWidths[leftColumn] = Math.max(minWidth, Math.round(startWidths[leftColumn] + dragDistance))
+    const draggedWidth = Math.round(startWidths[leftColumn] + dragDistance)
+
+    newWidths[leftColumn] = Math.max(minWidth, Math.min(draggedWidth, startWidths[leftColumn] + roomToGrow))
     return newWidths
   }
 

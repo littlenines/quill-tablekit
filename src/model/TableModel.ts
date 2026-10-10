@@ -3,10 +3,18 @@ import { indexes } from '../utils/array'
 import { Delta } from '../utils/quill'
 import { makeId, normalizeCellValue, type TableCellValue } from './cellValue'
 import { cellAreas, cellsInArea, expandToWholeCells, placeCells, type CellArea, type SpannedCell } from './grid'
+import { withoutEmptyValues, type CellStyle, type TableAlign, type TextAlign } from './properties'
 
 export interface CellData {
   id: string
   content: Delta
+  style: CellStyle
+}
+
+export interface PasteLimits {
+  maxRows: number
+  maxColumns: number
+  minColumnWidth: number
 }
 
 export interface PlacedCell {
@@ -17,9 +25,32 @@ export interface PlacedCell {
   colspan: number
 }
 
-const emptyCell = (): CellData => ({ id: makeId('cell'), content: new Delta().insert('\n') })
+const emptyCell = (style: CellStyle = {}): CellData => ({
+  id: makeId('cell'),
+  content: new Delta().insert('\n'),
+  style: { ...style },
+})
+
+const cellStyleOf = ({ background, verticalAlign }: TableCellValue): CellStyle =>
+  withoutEmptyValues({ background, verticalAlign })
 
 const isEmptyContent = (content: Delta) => content.length() <= 1
+
+const emptyContentKeepingLineFormat = (content: Delta): Delta => {
+  let firstLineAttributes: Record<string, unknown> = {}
+
+  content.eachLine((_lineContent, lineAttributes) => {
+    firstLineAttributes = lineAttributes
+    return false
+  })
+
+  const hasAttributes = Object.keys(firstLineAttributes).length > 0
+
+  return new Delta().insert('\n', hasAttributes ? firstLineAttributes : undefined)
+}
+
+const startsAt = (area: CellArea | undefined, rowIndex: number, columnIndex: number) =>
+  area?.top === rowIndex && area.left === columnIndex
 
 const sumOf = (numbers: number[]) => numbers.reduce((total, number) => total + number, 0)
 
@@ -35,16 +66,21 @@ export class TableModel {
   rowIds: string[]
   grid: CellData[][]
   columnWidths: number[] | null
+  rowHeights: (number | undefined)[]
+  header = false
+  tableAlign: TableAlign | undefined
+  borderColor: string | undefined
 
   constructor(tableId: string, rowIds: string[], grid: CellData[][], columnWidths: number[] | null) {
     this.tableId = tableId
     this.rowIds = rowIds
+    this.rowHeights = rowIds.map(() => undefined)
     this.grid = grid
     this.columnWidths = columnWidths
   }
 
   static create(rowCount: number, columnCount: number): TableModel {
-    const grid = indexes(rowCount).map(() => indexes(columnCount).map(emptyCell))
+    const grid = indexes(rowCount).map(() => indexes(columnCount).map(() => emptyCell()))
 
     return new TableModel(
       makeId('tbl'),
@@ -76,28 +112,41 @@ export class TableModel {
     const usedCellIds = new Set<string>()
     const usedRowIds = new Set<string>()
     const rowIds: string[] = []
+    const rowHeights: (number | undefined)[] = []
     const rows: SpannedCell<CellData>[][] = []
 
     for (const [groupIndex, { cellValue, content }] of cellGroups.entries()) {
       if (cellGroups[groupIndex - 1]?.cellValue.row !== cellValue.row) {
         rowIds.push(uniqueId(usedRowIds, cellValue.row, 'row'))
+        rowHeights.push(cellValue.rowHeight)
         rows.push([])
       }
 
       rows
         .at(-1)
         ?.push({
-          cell: { id: uniqueId(usedCellIds, cellValue.cell, 'cell'), content },
+          cell: { id: uniqueId(usedCellIds, cellValue.cell, 'cell'), content, style: cellStyleOf(cellValue) },
           rowspan: cellValue.rowspan,
           colspan: cellValue.colspan,
         })
     }
 
-    const tableId = cellGroups[0]?.cellValue.table ?? makeId('tbl')
-    const model = new TableModel(tableId, rowIds, placeCells(rows, emptyCell), null)
+    const firstCellValue = cellGroups[0]?.cellValue
+    const tableId = firstCellValue?.table ?? makeId('tbl')
+    const model = new TableModel(
+      tableId,
+      rowIds,
+      placeCells(rows, () => emptyCell()),
+      null,
+    )
     const storedWidths = cellGroups.find(({ cellValue }) => cellValue.widths)?.cellValue.widths
 
     model.setColumnWidths(storedWidths ?? null)
+    model.rowHeights = rowHeights.slice(0, model.rowCount)
+    model.header = firstCellValue?.header === true
+    model.tableAlign = firstCellValue?.tableAlign
+    model.borderColor = firstCellValue?.borderColor
+
     return model
   }
 
@@ -134,11 +183,14 @@ export class TableModel {
       const cellAbove = this.grid[rowIndex - 1]?.[columnIndex]
       const cellBelow = this.grid[rowIndex]?.[columnIndex]
 
-      return cellAbove && cellAbove === cellBelow ? cellAbove : emptyCell()
+      if (cellAbove && cellAbove === cellBelow) return cellAbove
+
+      return emptyCell((cellAbove ?? cellBelow)?.style)
     })
 
     this.grid.splice(rowIndex, 0, newRow)
     this.rowIds.splice(rowIndex, 0, makeId('row'))
+    this.rowHeights.splice(rowIndex, 0, undefined)
 
     return newRow
   }
@@ -148,7 +200,9 @@ export class TableModel {
       const cellOnLeft = row[columnIndex - 1]
       const cellOnRight = row[columnIndex]
 
-      row.splice(columnIndex, 0, cellOnLeft && cellOnLeft === cellOnRight ? cellOnLeft : emptyCell())
+      const isInsideMergedCell = cellOnLeft && cellOnLeft === cellOnRight
+
+      row.splice(columnIndex, 0, isInsideMergedCell ? cellOnLeft : emptyCell((cellOnLeft ?? cellOnRight)?.style))
     }
 
     if (this.columnWidths) {
@@ -164,6 +218,7 @@ export class TableModel {
   deleteRows(firstRow: number, endRow: number): void {
     this.grid.splice(firstRow, endRow - firstRow)
     this.rowIds.splice(firstRow, endRow - firstRow)
+    this.rowHeights.splice(firstRow, endRow - firstRow)
     this.normalize()
   }
 
@@ -207,11 +262,83 @@ export class TableModel {
       for (let columnIndex = area.left; columnIndex < area.right; columnIndex++) {
         const isTopLeft = rowIndex === area.top && columnIndex === area.left
 
-        if (!isTopLeft) this.grid[rowIndex][columnIndex] = emptyCell()
+        if (!isTopLeft) this.grid[rowIndex][columnIndex] = emptyCell(mergedCell.style)
       }
     }
 
     return true
+  }
+
+  updateCellStyle(cells: CellData[], styleChanges: { [Field in keyof CellStyle]?: CellStyle[Field] | null }): void {
+    for (const cell of cells) cell.style = withoutEmptyValues({ ...cell.style, ...styleChanges })
+  }
+
+  setTextAlign(cells: CellData[], textAlign: TextAlign | undefined): void {
+    for (const cell of cells) {
+      let alignedContent = new Delta()
+
+      cell.content.eachLine((lineContent, { align: _previousAlign, ...otherAttributes }) => {
+        const lineAttributes = textAlign ? { ...otherAttributes, align: textAlign } : otherAttributes
+        const hasAttributes = Object.keys(lineAttributes).length > 0
+
+        alignedContent = alignedContent.concat(lineContent).insert('\n', hasAttributes ? lineAttributes : undefined)
+      })
+
+      cell.content = alignedContent
+    }
+  }
+
+  clearContent(cells: CellData[]): void {
+    for (const cell of cells) cell.content = emptyContentKeepingLineFormat(cell.content)
+  }
+
+  pasteTable(source: TableModel, top: number, left: number, limits: PasteLimits): CellArea {
+    const neededRows = Math.min(limits.maxRows, top + source.rowCount)
+    const neededColumns = Math.min(limits.maxColumns, left + source.columnCount)
+
+    while (this.rowCount < neededRows) this.insertRow(this.rowCount)
+
+    while (this.columnCount < neededColumns) this.insertColumn(this.columnCount, limits.minColumnWidth)
+
+    const targetAreas = cellAreas(this.grid)
+    const sourceAreas = cellAreas(source.grid)
+
+    for (const [sourceRow, sourceCells] of source.grid.entries()) {
+      for (const [sourceColumn, sourceCell] of sourceCells.entries()) {
+        const targetRow = top + sourceRow
+        const targetColumn = left + sourceColumn
+        const targetCell = this.grid[targetRow]?.[targetColumn]
+
+        if (!targetCell || !startsAt(targetAreas.get(targetCell), targetRow, targetColumn)) continue
+
+        const isSourceCellStart = startsAt(sourceAreas.get(sourceCell), sourceRow, sourceColumn)
+
+        targetCell.content = isSourceCellStart ? sourceCell.content : emptyContentKeepingLineFormat(targetCell.content)
+        targetCell.style = { ...sourceCell.style }
+      }
+    }
+
+    return {
+      top,
+      left,
+      bottom: Math.min(this.rowCount, top + source.rowCount),
+      right: Math.min(this.columnCount, left + source.columnCount),
+    }
+  }
+
+  setRowHeights(rowHeights: (number | null | undefined)[] | null): void {
+    this.rowHeights = this.rowIds.map((_rowId, rowIndex) => {
+      const height = rowHeights?.[rowIndex]
+
+      return height != null && Number.isFinite(height) && height > 0 ? Math.round(height) : undefined
+    })
+  }
+
+  #foldRowHeightIntoRowAbove(rowIndex: number): void {
+    const [removedHeight] = this.rowHeights.splice(rowIndex, 1)
+    const heightAbove = this.rowHeights[rowIndex - 1]
+
+    this.rowHeights[rowIndex - 1] = heightAbove && removedHeight ? heightAbove + removedHeight : undefined
   }
 
   setColumnWidths(columnWidths: number[] | null): void {
@@ -235,6 +362,7 @@ export class TableModel {
       if (isCoveredFromAbove) {
         this.grid.splice(rowIndex, 1)
         this.rowIds.splice(rowIndex, 1)
+        this.#foldRowHeightIntoRowAbove(rowIndex)
       }
     }
 
@@ -265,14 +393,23 @@ export class TableModel {
   toDelta(): Delta {
     let tableDelta = new Delta()
 
+    const tableFields = withoutEmptyValues({
+      widths: this.columnWidths ? [...this.columnWidths] : undefined,
+      header: this.header || undefined,
+      tableAlign: this.tableAlign,
+      borderColor: this.borderColor,
+    })
+
     for (const { cell, row, rowspan, colspan } of this.orderedCells()) {
       const cellValue: TableCellValue = {
         table: this.tableId,
         row: this.rowIds[row],
+        ...(this.rowHeights[row] && { rowHeight: this.rowHeights[row] }),
         cell: cell.id,
         rowspan,
         colspan,
-        ...(this.columnWidths && { widths: [...this.columnWidths] }),
+        ...tableFields,
+        ...cell.style,
       }
 
       cell.content.eachLine((lineContent, lineAttributes) => {

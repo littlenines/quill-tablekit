@@ -3,21 +3,27 @@ import type { Range } from 'quill'
 import { registerBlots, type TableContainer } from './blots'
 import { CELL_FORMAT } from './config/constants'
 import { resolveOptions, type ResolvedTableKitOptions, type TableKitOptions } from './config/options'
+import { clipboardContentOf, wholeTableArea, writeToClipboard } from './editing/cellClipboard'
 import { matchTableCell, matchTableRow } from './editing/clipboard'
 import * as commands from './editing/commands'
 import { canMerge, canSplit, getTableContext, type TableContext } from './editing/context'
 import * as edits from './editing/edits'
 import { installInputGuards } from './editing/inputGuards'
 import { installKeyboard } from './editing/keyboard'
+import {
+  changeCellProperties,
+  changeTableProperties,
+  readCellProperties,
+  readTableProperties,
+} from './editing/properties'
 import { isInTable } from './editing/selection'
+import type { CellProperties, TableProperties } from './model/properties'
 import { injectStyles } from './styles/injectStyles'
 import { CellSelection } from './ui/CellSelection'
 import { ColumnResizer } from './ui/ColumnResizer'
-import { installContextMenu } from './ui/contextMenu'
-import { TableMenu } from './ui/TableMenu'
-import { tableMenuItems } from './ui/tableMenuItems'
-import { TablePicker } from './ui/TablePicker'
-import { setupToolbarButton } from './ui/toolbarButton'
+import { RowResizer } from './ui/RowResizer'
+import { TableControls } from './ui/TableControls'
+import { TableResizer } from './ui/TableResizer'
 import { Module } from './utils/quill'
 import { isSupportedQuill, warnUnsupported } from './utils/support'
 
@@ -36,11 +42,9 @@ class TableKit extends Module<TableKitOptions> {
 
   #settings: ResolvedTableKitOptions
   #listeners = new AbortController()
-  #picker: TablePicker | null = null
-  #menu: TableMenu | null = null
+  #controls: TableControls | null = null
   #cellSelection: CellSelection | null = null
-  #resizer: ColumnResizer | null = null
-  #toolbarButton: HTMLButtonElement | null = null
+  #resizers: (ColumnResizer | RowResizer | TableResizer)[] = []
   #lastRange: Range | null = null
 
   constructor(quill: Quill, userOptions: Partial<TableKitOptions> = {}) {
@@ -62,33 +66,27 @@ class TableKit extends Module<TableKitOptions> {
 
     const { signal } = this.#listeners
 
-    this.#picker = new TablePicker(container, this.#settings, (rowCount, columnCount) =>
-      this.insertTable(rowCount, columnCount),
-    )
-    this.#menu = new TableMenu(container)
+    this.#controls = new TableControls(quill, container, this.#settings, this, signal)
     this.#cellSelection = new CellSelection(quill, container)
 
     if (this.#settings.resizable) {
-      this.#resizer = new ColumnResizer(quill, container, this.#settings.minColumnWidth, (tableElement, columnWidths) =>
-        this.setColumnWidths(tableElement, columnWidths),
-      )
+      const { minColumnWidth } = this.#settings
+
+      this.#resizers = [
+        new ColumnResizer(quill, container, minColumnWidth, (tableElement, columnWidths) =>
+          this.setColumnWidths(tableElement, columnWidths),
+        ),
+        new RowResizer(quill, container, (tableElement, rowHeights) => this.setRowHeights(tableElement, rowHeights)),
+        new TableResizer(quill, container, minColumnWidth, (tableElement, layout) =>
+          commands.setTableLayout(quill, tableElement, layout),
+        ),
+      ]
     }
 
     quill.clipboard.addMatcher('td, th', matchTableCell)
     quill.clipboard.addMatcher('tr', matchTableRow)
     installKeyboard(quill, (direction) => this.moveToCell(direction))
-    installInputGuards(quill, container, signal)
-
-    if (this.#settings.contextMenu)
-      installContextMenu(quill, (clientX, clientY) => this.#openMenu(clientX, clientY, null), signal)
-
-    this.#toolbarButton = setupToolbarButton(
-      quill,
-      this.#settings.labels.insertTable,
-      () => this.#handleToolbarClick(),
-      signal,
-    )
-
+    installInputGuards(quill, container, this.#settings, signal)
     quill.on('editor-change', this.#handleEditorChange)
     quill.root.addEventListener('scroll', () => this.#cellSelection?.update(quill.getSelection()), { signal })
   }
@@ -116,6 +114,30 @@ class TableKit extends Module<TableKitOptions> {
 
   insertColumnRight(): void {
     this.#edit(edits.insertColumn('right', this.#settings.minColumnWidth))
+  }
+
+  insertParagraphAbove(): void {
+    commands.insertParagraph(this.quill, this.#currentRange(), 'above')
+  }
+
+  insertParagraphBelow(): void {
+    commands.insertParagraph(this.quill, this.#currentRange(), 'below')
+  }
+
+  selectRow(): void {
+    commands.selectCells(this.quill, this.#currentRange(), 'rows')
+  }
+
+  selectColumn(): void {
+    commands.selectCells(this.quill, this.#currentRange(), 'columns')
+  }
+
+  async copyTable(): Promise<boolean> {
+    const tableContext = this.getContext()
+
+    if (!tableContext) return false
+
+    return writeToClipboard(clipboardContentOf(tableContext, wholeTableArea(tableContext.model)))
   }
 
   deleteRow(): void {
@@ -150,12 +172,36 @@ class TableKit extends Module<TableKitOptions> {
     return tableContext != null && canSplit(tableContext)
   }
 
+  getCellProperties(): CellProperties | null {
+    const tableContext = this.getContext()
+
+    return tableContext && readCellProperties(tableContext)
+  }
+
+  setCellProperties(changes: Partial<CellProperties>): void {
+    commands.changeTable(this.quill, this.#currentRange(), changeCellProperties(changes))
+  }
+
+  getTableProperties(): TableProperties | null {
+    const tableContext = this.getContext()
+
+    return tableContext && readTableProperties(tableContext)
+  }
+
+  setTableProperties(changes: Partial<TableProperties>): void {
+    commands.changeTable(this.quill, this.#currentRange(), changeTableProperties(changes))
+  }
+
   isInTable(range: Range | null = this.#currentRange()): boolean {
     return isInTable(this.quill, range)
   }
 
   setColumnWidths(table: HTMLTableElement | TableContainer, columnWidths: number[] | null): void {
-    commands.setColumnWidths(this.quill, table, columnWidths)
+    commands.setTableLayout(this.quill, table, { columnWidths })
+  }
+
+  setRowHeights(table: HTMLTableElement | TableContainer, rowHeights: (number | null)[] | null): void {
+    commands.setTableLayout(this.quill, table, { rowHeights })
   }
 
   moveToCell(direction: 1 | -1): boolean {
@@ -169,14 +215,14 @@ class TableKit extends Module<TableKitOptions> {
   destroy(): void {
     this.#listeners.abort()
     this.quill.off('editor-change', this.#handleEditorChange)
-    this.#picker?.close()
-    this.#menu?.close()
+    this.#controls?.closeAll()
     this.#cellSelection?.destroy()
-    this.#resizer?.destroy()
-    this.#picker = null
-    this.#menu = null
+
+    for (const resizer of this.#resizers) resizer.destroy()
+
+    this.#controls = null
     this.#cellSelection = null
-    this.#resizer = null
+    this.#resizers = []
   }
 
   #edit(tableEdit: edits.TableEdit): void {
@@ -193,36 +239,7 @@ class TableKit extends Module<TableKitOptions> {
     if (range) this.#lastRange = range
 
     this.#cellSelection?.update(range)
-  }
-
-  #handleToolbarClick(): void {
-    const toolbarButton = this.#toolbarButton
-
-    if (!toolbarButton || !this.quill.isEnabled()) return
-    if (this.#picker?.popover.isOpen || this.#menu?.popover.isOpen) {
-      this.#picker?.close()
-      this.#menu?.close()
-
-      return
-    }
-
-    if (this.isInTable()) {
-      const { left, bottom } = toolbarButton.getBoundingClientRect()
-
-      this.#openMenu(left, bottom + 4, toolbarButton)
-    } else {
-      this.#picker?.open(toolbarButton)
-    }
-  }
-
-  #openMenu(clientX: number, clientY: number, toolbarButton: HTMLElement | null): void {
-    const tableContext = this.getContext()
-
-    if (!tableContext) return
-
-    const menuGroups = tableMenuItems(tableContext, this.#settings.labels, this)
-
-    this.#menu?.open(menuGroups, clientX, clientY, toolbarButton)
+    this.#controls?.updateActionBar(range)
   }
 }
 

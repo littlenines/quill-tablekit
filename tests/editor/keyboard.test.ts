@@ -82,7 +82,7 @@ describe('keyboard in a table', () => {
 })
 
 describe('deleting a selection', () => {
-  it('clears text across cells without destroying the table', () => {
+  it('clears the highlighted cells without destroying the table', () => {
     const { quill } = setupWithTable(2, 2)
 
     for (const [cellNumber, text] of [
@@ -101,7 +101,8 @@ describe('deleting a selection', () => {
       [11, 11],
       [11, 11],
     ])
-    expect(cells(quill).map((cellElement) => cellElement.textContent)).toEqual(['a', '', '2', 'b2'])
+    expect(cells(quill).map((cellElement) => cellElement.textContent)).toEqual(['', 'b1', '', 'b2'])
+    expect(quill.getSelection()).toEqual({ index: 0, length: 0 })
   })
 
   it('deletes a whole table when the selection covers all of it', () => {

@@ -1,5 +1,6 @@
 import { BLOT_NAMES, CLASS_NAMES } from '../config/constants'
 import { setAttribute } from '../model/cellValue'
+import { setStyle } from '../utils/style'
 import { Container, sharesGroupId, splitWhereGroupIdChanges, tableIdOf, type OptimizeContext } from './grouping'
 import { tableHTML } from './html'
 import { firstLine } from './TableCellLine'
@@ -8,8 +9,6 @@ export class TableContainer extends Container {
   static blotName = BLOT_NAMES.table
   static tagName = 'TABLE'
   static className = CLASS_NAMES.table
-
-  #previewWidths: number[] | null = null
 
   checkMerge(): boolean {
     return super.checkMerge() && sharesGroupId(this, this.next, tableIdOf)
@@ -23,15 +22,16 @@ export class TableContainer extends Container {
 
   syncLayout(): void {
     const cellValue = firstLine(this)?.cellValue
+    const tableElement = this.domNode as HTMLTableElement
 
-    if (cellValue) setAttribute(this.domNode as HTMLTableElement, 'data-table', cellValue.table)
+    if (cellValue) setAttribute(tableElement, 'data-table', cellValue.table)
 
-    this.#applyColumnWidths(this.#previewWidths ?? cellValue?.widths ?? null)
-  }
+    setAttribute(tableElement, 'data-header', cellValue?.header ? 'true' : null)
+    setStyle(tableElement, 'margin-left', cellValue?.tableAlign ? 'auto' : undefined)
+    setStyle(tableElement, 'margin-right', cellValue?.tableAlign === 'center' ? 'auto' : undefined)
+    setStyle(tableElement, '--qlt-border', cellValue?.borderColor)
 
-  preview(columnWidths: number[] | null): void {
-    this.#previewWidths = columnWidths
-    this.syncLayout()
+    this.#applyColumnWidths(cellValue?.widths ?? null)
   }
 
   html(startIndex: number, length: number): string {

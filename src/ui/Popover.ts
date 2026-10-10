@@ -20,13 +20,7 @@ export class Popover {
     this.close()
     this.#elementThatDoesNotClose = elementThatDoesNotClose
     this.#container.append(this.element)
-
-    const { left, top } = toContainerPosition(this.#container, clientX, clientY)
-    const maxLeft = Math.max(0, this.#container.clientWidth - this.element.offsetWidth - 4)
-
-    this.element.style.left = `${Math.max(0, Math.min(left, maxLeft))}px`
-    this.element.style.top = `${top}px`
-
+    this.moveTo(clientX, clientY)
     this.#documentListeners = new AbortController()
 
     const listenerOptions = { capture: true, signal: this.#documentListeners.signal }
@@ -35,10 +29,33 @@ export class Popover {
     document.addEventListener('keydown', this.#closeOnEscape, listenerOptions)
   }
 
+  moveTo(clientX: number, clientY: number): void {
+    const { left, top } = toContainerPosition(this.#container, clientX, clientY)
+    const maxLeft = Math.max(0, this.#container.clientWidth - this.element.offsetWidth - 4)
+
+    this.element.style.left = `${Math.max(0, Math.min(left, maxLeft))}px`
+    this.element.style.top = `${this.#fitInsideClippingContainer(top)}px`
+  }
+
   close(): void {
     this.#documentListeners?.abort()
     this.#documentListeners = null
     this.element.remove()
+  }
+
+  #fitInsideClippingContainer(top: number): number {
+    const { scrollTop, clientHeight } = this.#container
+    const clipsOverflow = getComputedStyle(this.#container).overflowY !== 'visible'
+
+    this.element.style.maxHeight = ''
+
+    if (!clipsOverflow || clientHeight === 0) return top
+
+    this.element.style.maxHeight = `${clientHeight - 8}px`
+
+    const lowestTop = scrollTop + clientHeight - this.element.offsetHeight - 4
+
+    return Math.max(scrollTop + 4, Math.min(top, lowestTop))
   }
 
   #closeOnOutsideClick = (event: MouseEvent): void => {

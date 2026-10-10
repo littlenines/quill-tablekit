@@ -20,8 +20,9 @@ function App() {
     <section id="editor-page">
       <h1>Quill Editor - TableKit</h1>
       <p>
-        Insert a table from the toolbar. Right-click a cell (or press the table button inside one) for row, column and
-        merge actions; drag a cell border to resize a column.
+        Insert a table from the toolbar. Click inside it and a bar with row, column, merge and style buttons shows up
+        next to it. Drag a border to resize a column or row, or the round handle in the corner to resize the whole
+        table.
       </p>
       <p>
         Images work inside cells too: click one to resize it (resize-quill-image) and hover it to add alt text

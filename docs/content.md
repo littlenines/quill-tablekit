@@ -36,6 +36,19 @@ Every line inside a table has a `tablekit-cell` attribute that says which table,
 - If a few lines in a row have the same `cell` id, that's one cell with several lines.
 - `rowspan` and `colspan` are how many rows and columns the cell covers.
 - `widths` only shows up after you've resized a column. It's the width of each column in px, and every line of the table has it.
+- `rowHeight` only shows up after you've resized a row. It's the height of that row in px, and every line in that row has it.
+
+The properties from the panel are stored the same way. They only show up once you've set them, so a plain table stays short:
+
+| Field           | Belongs to | Example     | Set by                   |
+| --------------- | ---------- | ----------- | ------------------------ |
+| `header`        | table      | `true`      | Header row               |
+| `tableAlign`    | table      | `"center"`  | Table properties         |
+| `borderColor`   | table      | `"#6fa8dc"` | Table properties         |
+| `background`    | cell       | `"#fff2cc"` | Cell or table properties |
+| `verticalAlign` | cell       | `"middle"`  | Cell properties          |
+
+Table fields are on every line of the table, like `widths`. Cell fields are on every line of that cell. Text alignment isn't in here: it's Quill's own `align` attribute on each line, next to `tablekit-cell`.
 
 That's all the module needs to build the table again, so whatever you save loads back the same.
 
@@ -48,6 +61,8 @@ import type { TableCellValue } from 'quill-tablekit'
 ## HTML
 
 `quill.getSemanticHTML()` gives you normal HTML you can use outside the editor. Tables come out as a plain `<table>` with `rowspan` and `colspan`, a `<colgroup>` if columns were resized, and simple borders. None of the editor's classes or data attributes are in there.
+
+The properties come along as inline styles: cell backgrounds, vertical alignment, row heights, the border color and the table's alignment. If the table has a header row, its cells are `<th>` instead of `<td>`, bold and with a light gray background. Text alignment inside a table comes out both as Quill's `ql-align-center` class and as an inline `text-align`, so it also works where Quill's CSS isn't loaded, like in emails.
 
 ```html
 <table style="border-collapse: collapse; table-layout: fixed; width: 100%;">

@@ -20,6 +20,30 @@ describe('normalizeCellValue', () => {
     })
   })
 
+  it('keeps valid table and cell properties and drops invalid ones', () => {
+    const cellValue = normalizeCellValue({
+      table: 't',
+      row: 'r',
+      cell: 'c',
+      header: true,
+      tableAlign: 'center',
+      borderColor: 'rgb(255, 0, 0)',
+      background: 'not a color!',
+      verticalAlign: 'sideways',
+    })
+
+    expect(cellValue).toEqual({
+      table: 't',
+      row: 'r',
+      cell: 'c',
+      rowspan: 1,
+      colspan: 1,
+      header: true,
+      tableAlign: 'center',
+      borderColor: '#ff0000',
+    })
+  })
+
   it('rejects values without ids', () => {
     expect(normalizeCellValue({ table: 't', row: 'r' })).toBeNull()
     expect(normalizeCellValue(true)).toBeNull()
@@ -48,6 +72,26 @@ describe('DOM round trip', () => {
     writeCellValue(node, value)
 
     expect(node.dataset.widths).toBe('60,90')
+    expect(readCellValue(node)).toEqual(value)
+  })
+
+  it('reads back table and cell properties', () => {
+    const node = document.createElement('p')
+    const value = {
+      table: 't',
+      row: 'r',
+      cell: 'c',
+      rowspan: 1,
+      colspan: 1,
+      header: true,
+      tableAlign: 'right' as const,
+      borderColor: '#ff0000',
+      background: '#fff2cc',
+      verticalAlign: 'bottom' as const,
+    }
+
+    writeCellValue(node, value)
+
     expect(readCellValue(node)).toEqual(value)
   })
 

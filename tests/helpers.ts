@@ -86,3 +86,28 @@ export const savedDocument = (extraCellValue: Partial<TableCellValue> = {}) =>
     .insert('\n', cellAttributes({ row: 'r2', cell: 'north', ...extraCellValue }))
     .insert('10')
     .insert('\n', cellAttributes({ row: 'r2', cell: 'amount', ...extraCellValue }))
+
+export const copyOrCut = (quill: Quill, eventType: 'copy' | 'cut') => {
+  const clipboardContent: Record<string, string> = {}
+  const clipboardEvent = new Event(eventType, { bubbles: true, cancelable: true }) as ClipboardEvent
+
+  Object.defineProperty(clipboardEvent, 'clipboardData', {
+    value: {
+      setData: (mimeType: string, value: string) => {
+        clipboardContent[mimeType] = value
+      },
+      getData: (mimeType: string) => clipboardContent[mimeType] ?? '',
+    },
+  })
+  quill.root.dispatchEvent(clipboardEvent)
+
+  return { clipboardEvent, clipboardContent }
+}
+
+export const cellTexts = (quill: Quill) => cells(quill).map((cellElement) => cellElement.textContent)
+
+export const fillCells = (quill: Quill, texts: string[]) => {
+  for (const [cellNumber, text] of [...texts.entries()].reverse()) {
+    if (text) quill.insertText(cellIndex(quill, cellNumber), text, 'user')
+  }
+}

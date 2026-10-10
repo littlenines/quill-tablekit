@@ -4,6 +4,7 @@ import { focusAdjacentButton, Popover } from './Popover'
 export interface MenuItem {
   label: string
   enabled: boolean
+  checked?: boolean
   run: () => void
 }
 
@@ -46,11 +47,13 @@ export class TableMenu {
     this.popover.close()
   }
 
-  #createButton({ label, enabled, run }: MenuItem): HTMLButtonElement {
+  #createButton({ label, enabled, checked, run }: MenuItem): HTMLButtonElement {
+    const roleAttributes: Record<string, string> =
+      checked === undefined ? { role: 'menuitem' } : { role: 'menuitemcheckbox', 'aria-checked': String(checked) }
     const button = createElement(
       'button',
       { type: 'button', className: 'qlt-menu-item', textContent: label, disabled: !enabled },
-      { role: 'menuitem' },
+      roleAttributes,
     )
 
     button.addEventListener('mousedown', (event) => event.preventDefault())

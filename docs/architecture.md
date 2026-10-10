@@ -23,10 +23,10 @@ src/
 ├── TableKit.ts           the Quill module: the public methods, and it sets everything else up
 ├── blots/
 │   ├── TableCellLine.ts  a line of text in a cell (the only blot with data)
-│   ├── TableCell.ts      <td>
+│   ├── TableCell.ts      <td>, with its background and vertical alignment
 │   ├── TableRow.ts       <tr>
 │   ├── TableBody.ts      <tbody>
-│   ├── TableContainer.ts <table> and its column widths
+│   ├── TableContainer.ts <table>: column widths, header row, alignment, border color
 │   ├── grouping.ts       how the containers group lines together
 │   ├── html.ts           getSemanticHTML output for tables
 │   └── index.ts          connects the blots and registers them
@@ -36,31 +36,43 @@ src/
 ├── editing/
 │   ├── context.ts        reading the table at the cursor into a TableContext
 │   ├── edits.ts          the table changes (insert row, merge...) as small functions
-│   ├── commands.ts       applying a change to the editor, inserting tables, Tab moves
+│   ├── commands.ts       applying a change to the editor, inserting tables, Tab moves, selecting rows
+│   ├── properties.ts     reading and changing cell and table properties
 │   ├── selection.ts      finding the table at the cursor, deleting without breaking tables
 │   ├── keyboard.ts       Tab, Backspace, Delete, Enter
-│   ├── inputGuards.ts    paste, cut, and typing over several cells
+│   ├── inputGuards.ts    copy, cut, paste, and typing over several cells
+│   ├── cellClipboard.ts  the clipboard content for a block of cells, and Copy table
 │   └── clipboard.ts      turning pasted <td> into table lines
 ├── model/
 │   ├── TableModel.ts     a table as a grid of cells, where all the editing happens
 │   ├── grid.ts           placing cells with spans on a grid
+│   ├── properties.ts     property types, and checking colors and alignments
 │   └── cellValue.ts      the tablekit-cell value: checking it, reading and writing it on elements
 ├── styles/
 │   ├── css.ts            the CSS
 │   └── injectStyles.ts   adds it to the page once
 ├── ui/
+│   ├── TableControls.ts  the picker, the menu and the panel, and what opens them
+│   ├── ActionBar.ts      the bar with buttons next to the table
+│   ├── icons.ts          the icons on the action bar
 │   ├── TablePicker.ts    the size picker
 │   ├── TableMenu.ts      the table menu
 │   ├── tableMenuItems.ts which items the menu shows, and which are disabled
-│   ├── Popover.ts        the floating box both of them use
+│   ├── PropertiesPanel.ts the panel with colors and alignment buttons
+│   ├── propertyFields.ts which fields the cell and table panels show
+│   ├── Popover.ts        the floating box the picker, menu and panel use
 │   ├── toolbarButton.ts  hooking up the table button in the toolbar
 │   ├── contextMenu.ts    opening the menu on right-click
 │   ├── CellSelection.ts  the blue highlight over selected cells
-│   ├── ColumnResizer.ts  the line you drag to resize
+│   ├── ColumnResizer.ts  the line you drag to resize a column
+│   ├── RowResizer.ts     the line you drag to resize a row
+│   ├── TableResizer.ts   the round corner handle you drag to resize the whole table
+│   ├── dragging.ts       following the mouse until it's released
 │   ├── domGrid.ts        reading the table on screen as a grid, measuring columns
 │   └── dom.ts            small createElement helper
 └── utils/
     ├── quill.ts          Delta, Parchment and Module from Quill (see "The CDN build")
+    ├── style.ts          setting an inline style only when it changes
     └── support.ts        checking the Quill version
 ```
 
@@ -74,13 +86,16 @@ The `<td>`, `<tr>`, `<tbody>` and `<table>` around the lines aren't stored anywh
 - Two containers next to each other merge when the lines on both sides of the edge have the same id (same cell, same row, same table). That's `checkMerge`.
 - A container splits where two lines next to each other have different ids. That's in `optimize`, through `splitWhereGroupIdChanges` in `grouping.ts`.
 
-So a list of lines is all it takes to build any table. The `<td>` copies `rowspan` and `colspan` from its first line.
+So a list of lines is all it takes to build any table. The `<td>` copies `rowspan`, `colspan`, its background and vertical alignment from its first line. The `<table>` copies the header row, alignment and border color from its first line too. The header row is just a `data-header` attribute on the table, and CSS styles its first row.
+
+Inline styles are only set when they actually change (`utils/style.ts`). The browser rewrites colors, so `#fff2cc` reads back as `rgb(255, 242, 204)`. If we compared those directly, every check would look like a change, and every change makes Quill run `optimize` again.
 
 A few things that look odd:
 
 - `TableCellLine.format()` ignores headers, lists, code blocks and quotes. Those formats replace the line with a different blot, and that would pull it out of the table.
 - Column widths go into a `<colgroup>`, but that `<colgroup>` sits in Parchment's "UI node" spot (`attachUI`). Parchment skips that spot when it reads the document, so the colgroup never ends up in the Delta. The widths themselves are stored on the lines.
-- While you drag a column, `TableContainer.preview()` shows the new widths without changing the document. They're saved once when you let go of the mouse. That way a drag is one undo step, not hundreds.
+- While you drag a column, a row or the table corner, the table itself doesn't change. Only a guide moves with the mouse: a line for a column or row, a dashed outline for the table. That's cheap, so the drag stays smooth even on big tables. The new sizes are saved once when you let go of the mouse, so a drag is also one undo step.
+- The guide is moved at most once per frame (`ui/dragging.ts`), and the resizers only build the table grid when the mouse is right on a cell border.
 - `getSemanticHTML` would normally use Quill's own HTML function, but Quill doesn't export it. `blots/html.ts` does the same thing for tables, minus the editor's classes and data attributes. If the selection is inside one cell, it returns just the paragraphs, so copying a word doesn't paste a one-cell table somewhere else. A table without resized columns gets `width: 100%`, same as in the editor.
 
 ## How editing works
@@ -94,6 +109,8 @@ Changes like inserting a row or merging cells don't touch the page directly. The
 If the cursor ends up in the same cell it started in, it keeps its spot in the text. Otherwise it goes to the start of the new cell.
 
 So adding a new table action means writing one function in `edits.ts` and a one-line method in `TableKit.ts` that runs it.
+
+Property changes (`editing/properties.ts`) go through the same three steps, but they don't move the cursor. They only change attributes, so the document doesn't get longer or shorter and the selection can stay where it was. That's why the panel can stay open while you click a few things.
 
 That makes every change a normal Delta. History is cut off before and after, so each change is one undo step. It also means the editing logic is tested without any DOM.
 
@@ -143,7 +160,7 @@ When the module is only registered, not enabled (like for a read-only viewer), `
 
 - `tests/model/`: the model, the grid and the cell value, no editor needed.
 - `tests/ui/`: the column resize math.
-- `tests/editor/`: the module in a real Quill under jsdom. Inserting, toolbar, keyboard, merging and rows/columns, clipboard, saved content, cleanup.
+- `tests/editor/`: the module in a real Quill under jsdom. Inserting, toolbar and panel, keyboard, merging and rows/columns, selecting rows and adding paragraphs, properties, clipboard, saved content, cleanup.
 
 Shared helpers are in `tests/helpers.ts`. jsdom doesn't do layout, so things like dragging a column or where the highlight sits are checked by hand in the demo in a real browser.
 
