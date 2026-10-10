@@ -1,0 +1,6 @@
+packages:
+  - .
+
+minimumReleaseAgeExclude:
+  - quill-image-alt
+  - resize-quill-image

@@ -1,0 +1,48 @@
+import { describe, expect, it } from 'vitest'
+import { cellIndex, setup, setupWithTable } from '../helpers'
+
+describe('cell selection highlight', () => {
+  it('shows only while the selection spans several cells', () => {
+    const { quill, host } = setupWithTable(2, 2)
+    const overlay = host.querySelector<HTMLElement>('.qlt-selection')
+
+    quill.setSelection(0, cellIndex(quill, 3) + 1, 'user')
+    expect(overlay?.style.display).toBe('block')
+    expect(host.querySelector('.ql-container')?.classList.contains('qlt-cells-selected')).toBe(true)
+
+    quill.setSelection(0, 0, 'user')
+    expect(overlay?.style.display).toBe('none')
+  })
+})
+
+describe('options', () => {
+  it('adds no resize handle when resizable is off', () => {
+    const { host } = setup({ resizable: false })
+
+    expect(host.querySelector('.qlt-col-handle')).toBeNull()
+  })
+})
+
+describe('destroy', () => {
+  it('removes its UI', () => {
+    const { tableKit, host } = setup()
+
+    tableKit.destroy()
+
+    expect(host.querySelector('.qlt-selection')).toBeNull()
+    expect(host.querySelector('.qlt-col-handle')).toBeNull()
+  })
+
+  it('stops reacting to right-clicks', () => {
+    const { quill, tableKit, host } = setupWithTable(1, 1)
+
+    tableKit.destroy()
+
+    const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+
+    quill.root.querySelector('td')?.dispatchEvent(contextMenuEvent)
+
+    expect(contextMenuEvent.defaultPrevented).toBe(false)
+    expect(host.querySelector('.qlt-menu')).toBeNull()
+  })
+})

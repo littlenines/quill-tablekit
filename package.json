@@ -1,0 +1,78 @@
+{
+  "name": "quill-tablekit",
+  "version": "0.1.0",
+  "description": "A Quill 2 table module with a size picker toolbar, cell merging and column resizing",
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.es.js",
+  "unpkg": "dist/index.iife.js",
+  "jsdelivr": "dist/index.iife.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "quill",
+    "quilljs",
+    "quill-module",
+    "editor",
+    "table",
+    "quill-table",
+    "merge-cells",
+    "colspan",
+    "rowspan",
+    "resize",
+    "react",
+    "javascript",
+    "front-end"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/littlenines/quill-tablekit.git"
+  },
+  "homepage": "https://github.com/littlenines/quill-tablekit#readme",
+  "bugs": {
+    "url": "https://github.com/littlenines/quill-tablekit/issues"
+  },
+  "author": "littlenines",
+  "license": "MIT",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm build"
+  },
+  "peerDependencies": {
+    "quill": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@microsoft/api-extractor": "^7.59.4",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "jsdom": "^30.1.2",
+    "prettier": "^3.9.9",
+    "quill": "^2.0.3",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "unplugin-dts": "^1.1.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
+  }
+}
