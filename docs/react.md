@@ -1,4 +1,6 @@
-# React
+# Frameworks
+
+The module works in any framework. These are examples for React and Vue, and the rules for the others.
 
 ## Editor
 

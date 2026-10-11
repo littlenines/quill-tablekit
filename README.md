@@ -1,22 +1,42 @@
-<h1 align="center">quill-tablekit - In Progress</h1>
+<h1 align="center">quill-tablekit</h1>
+
+<p align="center">Tables for Quill 2. Merge cells, resize columns, and paste tables from Word, Excel or Markdown.</p>
+
 <p align="center">
+  <a href="https://www.npmjs.com/package/quill-tablekit"><img src="https://img.shields.io/npm/v/quill-tablekit?style=flat" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/quill-tablekit"><img src="https://img.shields.io/npm/dm/quill-tablekit?style=flat" alt="npm downloads" /></a>
+  <img src="https://img.shields.io/badge/Quill-2.x-blue?style=flat" alt="Quill 2.x" />
+  <img src="https://img.shields.io/badge/types-TypeScript-blue?style=flat" alt="TypeScript types included" />
   <img src="https://img.shields.io/npm/l/quill-tablekit?style=flat" alt="license" />
-  <img src="https://img.shields.io/badge/Quill_compatible-2.x-blue?style=flat&cacheSeconds=3600" alt="Quill compatible 2.x" />
 </p>
 
-A [Quill](https://quilljs.com/) 2 module for tables you can actually edit. Tables are saved in the normal Quill Delta, so saving, loading and undo just work.
+Tables are saved in the normal Quill Delta, so saving, loading and undo just work. Use it with plain JavaScript, React, Vue, Svelte, Angular, Next.js, Nuxt or whatever you like.
 
 ## Features
 
-- Insert tables from a size picker in the toolbar
-- Add, delete, move and duplicate rows and columns, and sort rows by a column (opt-in)
+- Insert tables from the toolbar, with the mouse or keyboard
+- Add, move, duplicate, select and delete rows and columns
 - Merge and split cells
-- Resize columns, rows and the whole table by dragging, responsive by default
-- Header row and header column, cell colors, alignment, borders, striped rows, captions
-- A small action bar next to the cell you're in, also usable from the keyboard
-- Copy and paste cells, tables from Word, Google Docs, Excel and Sheets, text with tabs, or Markdown tables
-- Clean HTML from `getSemanticHTML()`, with `<thead>`, `<th scope>` and `<caption>` for screen readers and printing
-- TypeScript types included, works with [`resize-quill-image`](https://www.npmjs.com/package/resize-quill-image) and [`quill-image-alt`](https://www.npmjs.com/package/quill-image-alt)
+- Sort by any column (numbers, dates and text)
+- Resize columns, rows and the whole table by dragging
+- Responsive or fixed pixel widths
+- Equal column widths, equal row heights, fit to content, fit to width
+- Header row and header column
+- Cell colors and alignment
+- Table borders, spacing, alignment, stripes and captions
+- Action bar next to the cell, and an optional right-click menu
+- Tab and arrow keys between cells
+- Add a line above or below a table
+- Paste tables from Word, Excel, Google Docs or Markdown
+- Paste text with tabs into cells
+- Copy cells into Excel, or copy a table as Markdown
+- Undo for every change
+- Clean HTML from `getSemanticHTML()`
+- Read-only and zoomed editors
+- Translatable, with your own colors, icons and menu
+- API for your own buttons
+- TypeScript types included
+- Works with `resize-quill-image` and `quill-image-alt`
 
 ## Installation
 
@@ -24,13 +44,29 @@ A [Quill](https://quilljs.com/) 2 module for tables you can actually edit. Table
 npm install quill-tablekit
 ```
 
-Needs `quill` 2.x (a peer dependency). Quill 1 is not supported. Works with [`react-quill-new`](https://www.npmjs.com/package/react-quill-new).
+```bash
+pnpm add quill-tablekit
+# or
+yarn add quill-tablekit
+```
 
-Or from a CDN, after Quill. It's available as `QuillTableKit`:
+You also need `quill` 2.x. It's a peer dependency, so install it yourself if you don't have it yet. Quill 1 isn't supported.
+
+### CDN
+
+Load Quill first. The module is then available as `QuillTableKit`:
 
 ```html
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/quill-tablekit/dist/index.iife.js"></script>
+
+<div id="editor"></div>
+<script>
+  Quill.register('modules/tableKit', QuillTableKit)
+
+  new Quill('#editor', { theme: 'snow', modules: { toolbar: [['bold', 'italic'], ['table']], tableKit: true } })
+</script>
 ```
 
 ## Usage
@@ -38,6 +74,7 @@ Or from a CDN, after Quill. It's available as `QuillTableKit`:
 ```js
 import Quill from 'quill'
 import TableKit from 'quill-tablekit'
+import 'quill/dist/quill.snow.css'
 
 Quill.register('modules/tableKit', TableKit)
 
@@ -53,9 +90,15 @@ const quill = new Quill('#editor', {
 })
 ```
 
-Add `'table'` to the toolbar for the table button. The CSS is added for you. Don't turn on Quill's own `table` module at the same time.
+- Add `'table'` to the toolbar to get the table button.
+- The module's CSS is added for you.
+- Don't turn on Quill's own `table` module at the same time. Both use the same button.
 
-Click the table button to insert a table. Click into it and the action bar shows up with everything else. [Usage](https://github.com/littlenines/quill-tablekit/blob/master/docs/usage.md) explains all of it.
+Click the table button and pick a size. Then click into the table and a bar shows up with everything else. [Usage](https://github.com/littlenines/quill-tablekit/blob/master/docs/usage.md) explains all of it.
+
+## Frameworks
+
+It works with React, Vue, Svelte, Angular, Next.js, Nuxt and others, and with `react-quill-new`. Examples are in [Frameworks](https://github.com/littlenines/quill-tablekit/blob/master/docs/react.md).
 
 ## Options
 
@@ -63,23 +106,13 @@ Pass an object instead of `true` to change something. Everything is optional:
 
 ```js
 tableKit: {
-  pickerRows: 8,
-  pickerColumns: 10,
-  maxRows: 100,
-  maxColumns: 30,
-  actionBar: true,
-  contextMenu: false,
-  resizable: true,
-  responsiveWidths: true,
-  minColumnWidth: 40,
-  menu: ['insertRowBelow', 'insertColumnRight', 'mergeCells', 'splitCell', 'deleteTable'],
+  sortable: true,
+  contextMenu: true,
   colors: ['#ffffff', '#fff2cc', '#d9ead3', '#cfe2f3'],
-  icons: {},
-  labels: {},
 }
 ```
 
-| Option             | Type      | Default    | Description                                                                          |
+| Option             | Type      | Default    | What it does                                                                         |
 | ------------------ | --------- | ---------- | ------------------------------------------------------------------------------------ |
 | `pickerRows`       | `number`  | `8`        | Rows in the size picker grid.                                                        |
 | `pickerColumns`    | `number`  | `10`       | Columns in the size picker grid.                                                     |
@@ -88,25 +121,25 @@ tableKit: {
 | `actionBar`        | `boolean` | `true`     | Shows the bar with buttons next to the cell you're in.                               |
 | `contextMenu`      | `boolean` | `false`    | Right-click on a cell opens the table menu instead of the browser's menu.            |
 | `resizable`        | `boolean` | `true`     | Lets you drag to resize columns, rows and the whole table.                           |
-| `sortable`         | `boolean` | `false`    | Adds Sort A → Z and Sort Z → A to the menu and the Columns button.                   |
+| `sortable`         | `boolean` | `false`    | Adds Sort A → Z and Sort Z → A.                                                      |
 | `responsiveWidths` | `boolean` | `true`     | Saves widths as a share of the editor, so tables follow its width. `false` saves px. |
 | `minColumnWidth`   | `number`  | `40`       | Narrowest a column can get, in px.                                                   |
 | `menu`             | `array`   | every item | Which actions the menu and the action bar show. See [Menu items](#menu-items).       |
 | `colors`           | `array`   | 15 colors  | The colors in the properties panel. Any CSS color works.                             |
-| `icons`            | `object`  | built in   | Your own icons for the action bar. See [Icons](#icons).                              |
-| `labels`           | `object`  | English    | Every text in the picker, menu and panels, for example to translate it.              |
+| `icons`            | `object`  | built in   | Your own icons. See [Icons](#icons).                                                 |
+| `labels`           | `object`  | English    | Every text the module shows, for example to translate it. See [Labels](#labels).     |
 
 ### Menu items
 
-Pass the ones you want to keep. They always show in this order:
+List the ones you want to keep. They always show in this order:
 
 `insertRowAbove` · `insertRowBelow` · `insertColumnLeft` · `insertColumnRight` · `moveRowUp` · `moveRowDown` · `moveColumnLeft` · `moveColumnRight` · `duplicateRow` · `duplicateColumn` · `sortAscending` · `sortDescending` · `insertParagraphAbove` · `insertParagraphBelow` · `equalColumnWidths` · `fitToContent` · `fitToWidth` · `equalRowHeights` · `selectRow` · `selectColumn` · `copyTable` · `copyAsMarkdown` · `mergeCells` · `splitCell` · `headerRow` · `headerColumn` · `cellProperties` · `tableProperties` · `deleteRow` · `deleteColumn` · `deleteTable`
 
-The two sort items only show when `sortable` is `true`. With an empty list there's no menu and no action bar, but every action still works from the [API](#api).
+The two sort items only show with `sortable: true`. With an empty list there's no menu and no action bar, but every action still works from the [API](#api).
 
 ### Labels
 
-Only pass the texts you want to change, for example to translate them. Each menu item has a label with the same name.
+Only pass the texts you want to change, for example to translate them. Each menu item has a label with the same name:
 
 ```js
 tableKit: {
@@ -119,11 +152,11 @@ tableKit: {
 }
 ```
 
-The full list of labels and their default texts is in [Options](https://github.com/littlenines/quill-tablekit/blob/master/docs/options.md#labels).
+All labels and their default texts are in [Options](https://github.com/littlenines/quill-tablekit/blob/master/docs/options.md#labels).
 
 ### Icons
 
-Swap any action bar icon for your own SVG or icon-font markup. Only use markup you trust:
+Swap any icon for your own SVG or icon font. Only use markup you trust:
 
 ```js
 tableKit: {
@@ -158,14 +191,15 @@ Colors picked in the properties panel win over these. Class names and more are i
 | Key                    | What it does                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------- |
 | `Tab` / `Shift + Tab`  | Next or previous cell. Tab in the last cell adds a row.                               |
-| `Up` / `Down`          | The cell above or below, after moving through the lines of the current cell.          |
+| `↑` / `↓`              | The cell above or below, after moving through the lines of the current cell.          |
 | `Enter`                | A new line in the same cell.                                                          |
-| `Backspace` / `Delete` | Never joins two cells. With several cells selected, empties them but keeps the table. |
-| `Alt + F10`            | Moves the focus to the action bar. Arrow keys move between its buttons.               |
+| `Backspace` / `Delete` | Never joins two cells. With several cells selected, empties them and keeps the table. |
+| `Alt + F10`            | Moves the focus to the action bar. The arrow keys move between its buttons.           |
+| `Escape`               | Hides the action bar, or closes a menu or panel.                                      |
 
 ## API
 
-Everything the toolbar, menu and action bar do, you can call yourself, for example from your own buttons. The methods work on the table where the cursor is (or was last, if the editor doesn't have focus right now):
+Everything the toolbar and the action bar do, you can also call yourself, for example from your own buttons. The methods work on the table where the cursor is:
 
 ```js
 const tableKit = quill.getModule('tableKit')
@@ -180,66 +214,66 @@ quill.on('selection-change', () => {
 })
 ```
 
-| Method                                                                  | What it does                                                                                                      |
-| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `insertTable(rows, columns)`                                            | Adds a table at the cursor.                                                                                       |
-| `deleteTable()`                                                         | Removes the table.                                                                                                |
-| `insertRowAbove()`, `insertRowBelow()`                                  | Adds a row.                                                                                                       |
-| `insertColumnLeft()`, `insertColumnRight()`                             | Adds a column.                                                                                                    |
-| `deleteRow()`, `deleteColumn()`                                         | Removes the rows or columns the selection touches.                                                                |
-| `moveRowUp()`, `moveRowDown()`, `moveColumnLeft()`, `moveColumnRight()` | Swaps the row or column with its neighbour.                                                                       |
-| `duplicateRow()`, `duplicateColumn()`                                   | Adds a copy of the row or column next to it.                                                                      |
-| `sortByColumn(order)`                                                   | Sorts the rows by the cursor's column: numbers, then dates, then text. `'ascending'` (default) or `'descending'`. |
-| `mergeCells()`, `splitCell()`                                           | Merges the selected cells, or splits the merged cell.                                                             |
-| `canMergeCells()`, `canSplitCell()`                                     | `true` if merging or splitting is possible right now.                                                             |
-| `selectRow()`, `selectColumn()`                                         | Selects the whole row or column.                                                                                  |
-| `insertParagraphAbove()`, `insertParagraphBelow()`                      | Adds an empty line before or after the table.                                                                     |
-| `copyTable()`                                                           | Copies the table to the clipboard. Returns a promise with `true` if it worked.                                    |
-| `copyTableAsMarkdown()`, `getTableMarkdown()`                           | Copies the table as Markdown, or returns it as a string.                                                          |
-| `getCellProperties()`, `setCellProperties(changes)`                     | Reads or changes the selected cells. See below.                                                                   |
-| `getTableProperties()`, `setTableProperties(changes)`                   | Reads or changes the whole table. See below.                                                                      |
-| `setColumnWidths(table, widths)`                                        | Sets the column widths in px for a `<table>` element, or `null` for automatic.                                    |
-| `setRowHeights(table, heights)`                                         | Sets the row heights in px, `null` for a row that fits its content.                                               |
-| `equalizeColumnWidths()`, `equalizeRowHeights()`                        | Makes every column, or every row, the same size.                                                                  |
-| `fitColumnsToContent()`, `fitTableToWidth()`                            | Makes each column as wide as its content, or the table as wide as the editor.                                     |
-| `moveToCell(direction)`                                                 | Goes to the next (`1`) or previous (`-1`) cell, like Tab.                                                         |
-| `isInTable()`                                                           | `true` if the cursor is in a table.                                                                               |
-| `getContext()`                                                          | The table under the cursor as a grid, for building your own UI.                                                   |
-| `destroy()`                                                             | Removes the module's listeners and popups. See [Cleanup](#cleanup).                                               |
+| Method                                                                  | What it does                                                                            |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `insertTable(rows, columns)`                                            | Adds a table at the cursor.                                                             |
+| `deleteTable()`                                                         | Removes the table.                                                                      |
+| `insertRowAbove()`, `insertRowBelow()`                                  | Adds a row.                                                                             |
+| `insertColumnLeft()`, `insertColumnRight()`                             | Adds a column.                                                                          |
+| `deleteRow()`, `deleteColumn()`                                         | Removes the rows or columns the selection touches.                                      |
+| `moveRowUp()`, `moveRowDown()`, `moveColumnLeft()`, `moveColumnRight()` | Swaps the row or column with its neighbour.                                             |
+| `duplicateRow()`, `duplicateColumn()`                                   | Adds a copy of the row or column next to it.                                            |
+| `sortByColumn(order)`                                                   | Sorts the rows by the cursor's column. `'ascending'` (default) or `'descending'`.       |
+| `mergeCells()`, `splitCell()`                                           | Merges the selected cells, or splits the merged cell.                                   |
+| `canMergeCells()`, `canSplitCell()`                                     | `true` if merging or splitting is possible right now.                                   |
+| `selectRow()`, `selectColumn()`                                         | Selects the whole row or column.                                                        |
+| `insertParagraphAbove()`, `insertParagraphBelow()`                      | Adds an empty line before or after the table.                                           |
+| `copyTable()`, `copyTableAsMarkdown()`                                  | Copies the table, or copies it as Markdown. Returns a promise with `true` if it worked. |
+| `getTableMarkdown()`                                                    | Returns the table as a Markdown string.                                                 |
+| `getCellProperties()`, `setCellProperties(changes)`                     | Reads or changes the selected cells.                                                    |
+| `getTableProperties()`, `setTableProperties(changes)`                   | Reads or changes the whole table.                                                       |
+| `setColumnWidths(table, widths)`                                        | Sets the column widths in px for a `<table>` element, or `null` for automatic.          |
+| `setRowHeights(table, heights)`                                         | Sets the row heights in px, `null` for a row that fits its content.                     |
+| `equalizeColumnWidths()`, `equalizeRowHeights()`                        | Makes every column, or every row, the same size.                                        |
+| `fitColumnsToContent()`, `fitTableToWidth()`                            | Makes each column as wide as its content, or the table as wide as the editor.           |
+| `moveToCell(direction)`                                                 | Goes to the next (`1`) or previous (`-1`) cell, like Tab.                               |
+| `isInTable()`                                                           | `true` if the cursor is in a table.                                                     |
+| `destroy()`                                                             | Removes everything the module added. See [Cleanup](#cleanup).                           |
 
-Each change is one undo step.
-
-**Cell properties:** `background` (a CSS color or `null`), `verticalAlign` (`'top'`, `'middle'`, `'bottom'`), `textAlign` (`'left'`, `'center'`, `'right'`, `'justify'`).
-
-**Table properties:** `header` and `headerColumn` (`true`/`false`), `align` (`'left'`, `'center'`, `'right'`), `borderStyle` (`'solid'`, `'dashed'`, `'none'`), `borderColor`, `cellPadding` (`'compact'`, `'normal'`, `'wide'`), `striped`, `stripeColor`, `background`, `caption` and `captionSide` (`'top'`, `'bottom'`). Only the fields you pass change.
-
-More details and examples are in [API](https://github.com/littlenines/quill-tablekit/blob/master/docs/api.md).
+Each change is one undo step. All fields and values are in [API](https://github.com/littlenines/quill-tablekit/blob/master/docs/api.md).
 
 ## Saving content
 
-Save `quill.getContents()` like any Delta and load it with `setContents()`. To show it on a page, use a read-only Quill with the module registered, or `quill.getSemanticHTML()` for plain HTML. More in [Saved content](https://github.com/littlenines/quill-tablekit/blob/master/docs/content.md).
+Save `quill.getContents()` like any Delta and load it with `setContents()`. To show it on a page:
+
+- with JavaScript, use a read-only Quill with the module registered;
+- without Quill (server rendering, emails, apps), save `quill.getSemanticHTML()` next to the Delta and show that.
+
+Other Delta-to-HTML libraries like `quill-delta-to-html` don't know the table format. More in [Saved content](https://github.com/littlenines/quill-tablekit/blob/master/docs/content.md).
 
 ## Cleanup
 
-When your editor unmounts (React, Vue, route changes), call `destroy()` first:
+Before you remove an editor (component unmount, route change), call `destroy()`:
 
 ```js
 quill.getModule('tableKit')?.destroy()
 ```
 
+It removes the module's listeners, popups, keyboard shortcuts and paste handling.
+
 ## Docs
 
-All pages are also listed on the [docs page](https://github.com/littlenines/quill-tablekit/blob/master/docs/README.md).
-
 - [Installation](https://github.com/littlenines/quill-tablekit/blob/master/docs/installation.md): npm, CDN, Quill versions
-- [Usage](https://github.com/littlenines/quill-tablekit/blob/master/docs/usage.md): inserting, merging, resizing, properties, keyboard, copy and paste
+- [Usage](https://github.com/littlenines/quill-tablekit/blob/master/docs/usage.md): inserting, merging, resizing, sorting, properties, keyboard, copy and paste
 - [Options](https://github.com/littlenines/quill-tablekit/blob/master/docs/options.md): all settings, labels, icons, CSS variables
 - [API](https://github.com/littlenines/quill-tablekit/blob/master/docs/api.md): every method
 - [Saved content](https://github.com/littlenines/quill-tablekit/blob/master/docs/content.md): the Delta and the HTML
-- [React](https://github.com/littlenines/quill-tablekit/blob/master/docs/react.md): editor component, read-only viewer, Vue and other frameworks
+- [Frameworks](https://github.com/littlenines/quill-tablekit/blob/master/docs/react.md): React, Vue and others, and a read-only viewer
 - [Troubleshooting](https://github.com/littlenines/quill-tablekit/blob/master/docs/troubleshooting.md): common problems
-- [Limitations](https://github.com/littlenines/quill-tablekit/blob/master/docs/limitations.md): what doesn't work
+- [Limitations](https://github.com/littlenines/quill-tablekit/blob/master/docs/limitations.md): what it can't do
 - [How it works](https://github.com/littlenines/quill-tablekit/blob/master/docs/architecture.md): the code, running it locally, tests
+
+All pages are also listed on the [docs page](https://github.com/littlenines/quill-tablekit/blob/master/docs/README.md).
 
 ## License
 

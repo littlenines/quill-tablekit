@@ -9,7 +9,7 @@ Start with [Installation](./installation.md) and [Setup](./usage.md#setup).
 | Install it with npm or a CDN              | [Installation](./installation.md)                            |
 | Add the table button to my editor         | [Usage: Setup](./usage.md#setup)                             |
 | See everything a table can do             | [Usage](./usage.md)                                          |
-| Use it in React                           | [React](./react.md)                                          |
+| Use it in React, Vue or another framework | [Frameworks](./react.md)                                     |
 | Change the menu, colors, icons or texts   | [Options](./options.md)                                      |
 | Translate the module                      | [Options: Labels](./options.md#labels)                       |
 | Change the module's colors and styles     | [Options: Colors and styles](./options.md#colors-and-styles) |
