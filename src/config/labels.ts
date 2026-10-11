@@ -25,6 +25,7 @@ export interface TableKitLabels {
   selectRow: string
   selectColumn: string
   copyTable: string
+  copyAsMarkdown: string
   mergeCells: string
   splitCell: string
   headerRow: string
@@ -95,6 +96,7 @@ export const DEFAULT_LABELS = {
   selectRow: 'Select row',
   selectColumn: 'Select column',
   copyTable: 'Copy table',
+  copyAsMarkdown: 'Copy as Markdown',
   mergeCells: 'Merge cells',
   splitCell: 'Split cell',
   headerRow: 'Header row',

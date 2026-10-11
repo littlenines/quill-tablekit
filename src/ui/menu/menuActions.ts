@@ -30,6 +30,7 @@ export const menuActions = (tableKit: TableKit, { openCellProperties, openTableP
     selectRow: () => tableKit.selectRow(),
     selectColumn: () => tableKit.selectColumn(),
     copyTable: () => void tableKit.copyTable(),
+    copyAsMarkdown: () => void tableKit.copyTableAsMarkdown(),
     mergeCells: () => tableKit.mergeCells(),
     splitCell: () => tableKit.splitCell(),
     headerRow: () => tableKit.setTableProperties({ header: !tableKit.getTableProperties()?.header }),

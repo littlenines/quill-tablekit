@@ -49,9 +49,11 @@ export const wholeTableArea = (model: TableModel): CellArea => ({
   right: model.columnCount,
 })
 
+// Without HTML, only the text goes on the clipboard
 const copyWithCopyEvent = ({ html, text }: ClipboardContent): boolean => {
   const fillClipboard = (event: ClipboardEvent) => {
-    event.clipboardData?.setData('text/html', html)
+    if (html) event.clipboardData?.setData('text/html', html)
+
     event.clipboardData?.setData('text/plain', text)
     event.preventDefault()
     event.stopImmediatePropagation()
@@ -74,7 +76,7 @@ export const writeToClipboard = async (clipboardContent: ClipboardContent): Prom
   if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
     try {
       const clipboardItem = new ClipboardItem({
-        'text/html': new Blob([html], { type: 'text/html' }),
+        ...(html && { 'text/html': new Blob([html], { type: 'text/html' }) }),
         'text/plain': new Blob([text], { type: 'text/plain' }),
       })
 

@@ -9,6 +9,7 @@ import { deleteSelectedContent, selectedCellsContext } from '../selectedCells'
 import { getTableContext } from '../context'
 import { lastSelectedLine, lineAt, needsTableAwareDelete, pickFormats, tableOf } from '../selection'
 import { parseTabSeparated, tableFromTexts } from '../clipboard/tabSeparated'
+import { markdownPaste } from '../../markdown/pasteMarkdown'
 
 const HTML_TABLE_CELL = /<t[dh][\s>]/i
 
@@ -91,12 +92,16 @@ const handlePaste = (quill: Quill, event: ClipboardEvent, pasteLimits: PasteLimi
   if (!pastedHTML && !pastedText) return
 
   const isPastingIntoTable = lineAt(quill, range.index) != null || needsTableAwareDelete(quill, range)
+  const hasHTMLTable = HTML_TABLE_CELL.test(pastedHTML)
+  const pastedMarkdown = hasHTMLTable ? null : markdownPaste(pastedText, pasteLimits)
+  const markdownContent =
+    pastedMarkdown && (!isPastingIntoTable || pastedMarkdown.isOneTable) ? pastedMarkdown.content : null
 
-  if (!isPastingIntoTable && !HTML_TABLE_CELL.test(pastedHTML)) return
+  if (!isPastingIntoTable && !hasHTMLTable && !markdownContent) return
 
   event.preventDefault()
 
-  const pastedContent = quill.clipboard.convert({ html: pastedHTML, text: pastedText })
+  const pastedContent = markdownContent ?? quill.clipboard.convert({ html: pastedHTML, text: pastedText })
   const pastedTable = hasTableLines(pastedContent) ? pastedContent : tableFromPlainText(pastedText)
   const targetTable = pastedTable ? tableContextForPaste(quill, range) : null
 

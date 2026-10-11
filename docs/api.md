@@ -32,6 +32,8 @@ The methods work on the table where the cursor is. If the editor doesn't have fo
 | `sortByColumn(order)`                              | Sorts the rows by the cursor's column, reading numbers, dates and text: `'ascending'` (the default) or `'descending'`. Works without the `sortable` option. See [Usage](./usage.md#sorting). |
 | `selectRow()`, `selectColumn()`                    | Selects every cell in the rows or columns the selection touches.                                                                                                                             |
 | `copyTable()`                                      | Copies the whole table to the clipboard as HTML and as tab-separated text. Returns a promise with `true` if it worked.                                                                       |
+| `copyTableAsMarkdown()`                            | Copies the whole table as Markdown text. Returns a promise with `true` if it worked.                                                                                                         |
+| `getTableMarkdown()`                               | The table at the cursor as a Markdown string, or `null` outside a table. See [Usage](./usage.md#markdown-tables).                                                                            |
 | `insertParagraphAbove()`, `insertParagraphBelow()` | Adds an empty line right before or after the table and moves the cursor there.                                                                                                               |
 
 ## Merging

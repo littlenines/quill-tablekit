@@ -15,3 +15,4 @@
 - In the saved HTML, striped rows without their own stripe color use `#f6f8fa`, even if you changed `--qlt-stripe-bg` for the editor. Pick the color in Table properties if it should be in the saved HTML too.
 - **Copy table** needs the browser's Clipboard API for the best result, which only works on `https://` pages and `localhost`. Elsewhere it falls back to the older copy command, and if the browser blocks that too, `copyTable()` returns `false`.
 - Pasting a table into a table doesn't merge cells in the target, even if they were merged in the copy.
+- **Copy as Markdown** loses what Markdown can't show: merged cells, colors, borders, row heights, widths, the header column and the caption. Other Markdown in pasted text, like headings and lists, stays plain text. Only the tables are converted.

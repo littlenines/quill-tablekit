@@ -14,7 +14,7 @@ A [Quill](https://quilljs.com/) 2 module for tables you can actually edit. Table
 - Resize columns, rows and the whole table by dragging, responsive by default
 - Header row and header column, cell colors, alignment, borders, striped rows, captions
 - A small action bar next to the cell you're in, also usable from the keyboard
-- Copy and paste cells, tables from Word, Google Docs, Excel and Sheets, or text with tabs
+- Copy and paste cells, tables from Word, Google Docs, Excel and Sheets, text with tabs, or Markdown tables
 - Clean HTML from `getSemanticHTML()`, with `<thead>`, `<th scope>` and `<caption>` for screen readers and printing
 - TypeScript types included, works with [`resize-quill-image`](https://www.npmjs.com/package/resize-quill-image) and [`quill-image-alt`](https://www.npmjs.com/package/quill-image-alt)
 
@@ -100,7 +100,7 @@ tableKit: {
 
 Pass the ones you want to keep. They always show in this order:
 
-`insertRowAbove` · `insertRowBelow` · `insertColumnLeft` · `insertColumnRight` · `moveRowUp` · `moveRowDown` · `moveColumnLeft` · `moveColumnRight` · `duplicateRow` · `duplicateColumn` · `sortAscending` · `sortDescending` · `insertParagraphAbove` · `insertParagraphBelow` · `equalColumnWidths` · `fitToContent` · `fitToWidth` · `equalRowHeights` · `selectRow` · `selectColumn` · `copyTable` · `mergeCells` · `splitCell` · `headerRow` · `headerColumn` · `cellProperties` · `tableProperties` · `deleteRow` · `deleteColumn` · `deleteTable`
+`insertRowAbove` · `insertRowBelow` · `insertColumnLeft` · `insertColumnRight` · `moveRowUp` · `moveRowDown` · `moveColumnLeft` · `moveColumnRight` · `duplicateRow` · `duplicateColumn` · `sortAscending` · `sortDescending` · `insertParagraphAbove` · `insertParagraphBelow` · `equalColumnWidths` · `fitToContent` · `fitToWidth` · `equalRowHeights` · `selectRow` · `selectColumn` · `copyTable` · `copyAsMarkdown` · `mergeCells` · `splitCell` · `headerRow` · `headerColumn` · `cellProperties` · `tableProperties` · `deleteRow` · `deleteColumn` · `deleteTable`
 
 The two sort items only show when `sortable` is `true`. With an empty list there's no menu and no action bar, but every action still works from the [API](#api).
 
@@ -195,6 +195,7 @@ quill.on('selection-change', () => {
 | `selectRow()`, `selectColumn()`                                         | Selects the whole row or column.                                                                                  |
 | `insertParagraphAbove()`, `insertParagraphBelow()`                      | Adds an empty line before or after the table.                                                                     |
 | `copyTable()`                                                           | Copies the table to the clipboard. Returns a promise with `true` if it worked.                                    |
+| `copyTableAsMarkdown()`, `getTableMarkdown()`                           | Copies the table as Markdown, or returns it as a string.                                                          |
 | `getCellProperties()`, `setCellProperties(changes)`                     | Reads or changes the selected cells. See below.                                                                   |
 | `getTableProperties()`, `setTableProperties(changes)`                   | Reads or changes the whole table. See below.                                                                      |
 | `setColumnWidths(table, widths)`                                        | Sets the column widths in px for a `<table>` element, or `null` for automatic.                                    |

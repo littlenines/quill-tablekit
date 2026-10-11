@@ -56,6 +56,11 @@ src/
 │   ├── tableHTML.ts        getSemanticHTML output for tables and copied cells
 │   ├── cellTags.ts         the <td> and <th> tags with their inline styles
 │   └── markup.ts           escaping, and copying an element without the editor's markup
+├── markdown/
+│   ├── findTables.ts       finding Markdown tables in pasted text, by GitHub's rules
+│   ├── inlineMarkdown.ts   bold, italic, code, links and images, from Markdown to Delta and back
+│   ├── pasteMarkdown.ts    pasted Markdown as editor content: tables, and the text around them
+│   └── tableMarkdown.ts    a table as Markdown, for Copy as Markdown
 ├── model/
 │   ├── TableModel.ts       a table as a grid of cells: reading and writing its lines, finding cells
 │   ├── tableLines.ts       grouping a Delta's lines into rows of cells
@@ -248,7 +253,8 @@ The tests follow the source folders:
 - `tests/model/`: the model, the grid and the cell value, no editor needed. `tests/model/operations/` has one file per file in `src/model/operations/`, with shared helpers in `tests/model/modelHelpers.ts` (`tableWithTexts` builds a model from a grid of texts, `textsOf` reads it back).
 - `tests/ui/`: the resize math.
 - `tests/editor/`: the module in a real Quill under jsdom: inserting, structure, keyboard, moving between cells, arranging rows and columns, saved content, cleanup.
-- `tests/clipboard/`: pasting HTML and text, copying cells, pasting into cells.
+- `tests/clipboard/`: pasting HTML, text and Markdown, copying cells, pasting into cells.
+- `tests/markdown/`: finding Markdown tables, inline Markdown both ways, and writing a table as Markdown.
 - `tests/properties/`: cell and table properties, header row and column, table style, stripes, responsive widths.
 - `tests/controls/`: the size picker, the table menu, the action bar, the properties panel and its color fields.
 

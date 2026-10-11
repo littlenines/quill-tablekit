@@ -24,6 +24,7 @@ import type { CellProperties, TableProperties, WidthUnit } from './model/propert
 import type { SortOrder } from './model/operations/sort'
 import { fitColumnWidthsWithin } from './model/layout'
 import { equalizeColumnWidths, fitToWidth } from './model/operations/widths'
+import { tableMarkdown } from './markdown/tableMarkdown'
 import { injectStyles } from './styles/injectStyles'
 import { CellSelection } from './ui/CellSelection'
 import { ColumnResizer } from './ui/resize/ColumnResizer'
@@ -217,6 +218,18 @@ class TableKit extends Module<TableKitOptions> {
     if (!tableContext) return false
 
     return writeToClipboard(clipboardContentOf(tableContext, wholeTableArea(tableContext.model)))
+  }
+
+  async copyTableAsMarkdown(): Promise<boolean> {
+    const markdown = this.getTableMarkdown()
+
+    return markdown != null && writeToClipboard({ html: '', text: markdown })
+  }
+
+  getTableMarkdown(): string | null {
+    const tableContext = this.getContext()
+
+    return tableContext && tableMarkdown(tableContext.model)
   }
 
   deleteRow(): void {

@@ -52,7 +52,7 @@ const BUTTON_SPECS: ButtonSpec[] = [
     kind: 'items',
     label: 'moreGroup',
     icon: 'more',
-    items: ['insertParagraphAbove', 'insertParagraphBelow', 'fitToWidth', 'copyTable'],
+    items: ['insertParagraphAbove', 'insertParagraphBelow', 'fitToWidth', 'copyTable', 'copyAsMarkdown'],
   },
   { kind: 'item', item: 'deleteTable', icon: 'deleteTable', danger: true },
 ]

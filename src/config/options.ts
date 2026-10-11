@@ -10,7 +10,7 @@ export const MENU_GROUPS = [
   ['sortAscending', 'sortDescending'],
   ['insertParagraphAbove', 'insertParagraphBelow'],
   ['equalColumnWidths', 'fitToContent', 'fitToWidth', 'equalRowHeights'],
-  ['selectRow', 'selectColumn', 'copyTable'],
+  ['selectRow', 'selectColumn', 'copyTable', 'copyAsMarkdown'],
   ['mergeCells', 'splitCell'],
   ['headerRow', 'headerColumn', 'cellProperties', 'tableProperties'],
   ['deleteRow', 'deleteColumn', 'deleteTable'],

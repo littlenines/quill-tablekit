@@ -79,6 +79,7 @@ The order in the menu stays the same no matter what order you list them in. Thes
 | `selectRow`            | Selects the whole row.                                         |
 | `selectColumn`         | Selects the whole column.                                      |
 | `copyTable`            | Copies the whole table to the clipboard.                       |
+| `copyAsMarkdown`       | Copies the whole table as Markdown.                            |
 | `mergeCells`           | Merges the selected cells.                                     |
 | `splitCell`            | Splits a merged cell.                                          |
 | `headerRow`            | Turns the header row on or off.                                |
@@ -180,6 +181,7 @@ tableKit: {
 | `selectRow`            | Select row                   |
 | `selectColumn`         | Select column                |
 | `copyTable`            | Copy table                   |
+| `copyAsMarkdown`       | Copy as Markdown             |
 | `mergeCells`           | Merge cells                  |
 | `splitCell`            | Split cell                   |
 | `headerRow`            | Header row                   |

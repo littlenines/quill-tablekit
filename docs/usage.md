@@ -262,6 +262,25 @@ Text where the cells are separated by tabs, from a CSV-like file, a plain-text a
 - The text only counts as cells if every line has the same number of them. Otherwise, like code indented with tabs, it's pasted as normal text into the one cell.
 - Outside a table, text with tabs is pasted as normal text.
 
+### Markdown tables
+
+Paste a Markdown table, from a README, a chat with an AI or a `.md` file, and it becomes a real table:
+
+```md
+| Name      | Price | Note |
+| :-------- | ----: | :--: |
+| Green tea |  3.50 | hot  |
+```
+
+- The first row becomes the header row. If it's empty, it's left out and the table has no header.
+- The colons in the second line set the text alignment of the column.
+- `**bold**`, `*italic*`, `~~strikethrough~~`, `` `code` ``, links, images and `<br>` line breaks in a cell become real formatting.
+- Text around the table stays text, so you can paste a whole section with a table in it. Tables in ``` code blocks stay as they are.
+- Into a cell, a pasted table fills the cells like any other table (see below). Markdown with other text around it goes into the cell as plain text.
+- If the clipboard also has a real HTML table, like when you copy from a page that shows the table, that one is used.
+
+**Copy as Markdown** (under More) copies the table as Markdown, with the columns lined up and the alignment from the cells. Markdown has no merged cells or colors, so a merged cell's text goes in its first spot and styles are left out. The first row is always the header, since a Markdown table needs one.
+
 ### Pasting a table into a table
 
 If the cursor is in a cell and you paste a table, the pasted cells overwrite the cells starting at the cursor, going right and down. With several cells selected, it starts at the top-left one. That's how you move a block of cells around: copy, click where it should go, paste.
