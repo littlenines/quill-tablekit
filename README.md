@@ -10,6 +10,11 @@
 
 `quill-tablekit` is a Quill 2 module for tables you can actually edit: merge cells, resize columns, and paste tables from Word, Excel or Markdown.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/littlenines/quill-tablekit/master/images/d2.png" alt="Table editing" />
+  <br />
+  <img src="https://raw.githubusercontent.com/littlenines/quill-tablekit/master/images/d1.png" alt="Table properties" />
+</p>
 
 ---
 
