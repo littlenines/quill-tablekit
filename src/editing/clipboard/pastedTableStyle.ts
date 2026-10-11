@@ -57,10 +57,12 @@ export const hasHeaderColumn = (tableElement: HTMLTableElement): boolean => {
   return bodyRows.length > 0 && bodyRows.every((rowElement) => rowElement.cells[0]?.tagName === 'TH')
 }
 
-export const readTableAlign = ({ style, align }: HTMLTableElement): TableAlign | undefined => {
-  if (style.marginLeft === 'auto') return style.marginRight === 'auto' ? 'center' : 'right'
+export const readTableAlign = (tableElement: HTMLTableElement): TableAlign | undefined => {
+  const { marginLeft, marginRight } = tableElement.style
 
-  return normalizeTableAlign(align.toLowerCase())
+  if (marginLeft === 'auto') return marginRight === 'auto' ? 'center' : 'right'
+
+  return normalizeTableAlign(tableElement.getAttribute('align')?.toLowerCase())
 }
 
 export const backgroundOf = (cellElement: HTMLTableCellElement) =>
