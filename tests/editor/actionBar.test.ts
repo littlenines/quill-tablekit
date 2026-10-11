@@ -39,6 +39,7 @@ describe('action bar', () => {
       'Move row up',
       'Move row down',
       'Duplicate row',
+      'Equal row heights',
       'Select row',
       'Delete row',
     ])

@@ -28,7 +28,16 @@ const BUTTON_SPECS: ButtonSpec[] = [
     kind: 'items',
     label: 'rowsGroup',
     icon: 'rows',
-    items: ['insertRowAbove', 'insertRowBelow', 'moveRowUp', 'moveRowDown', 'duplicateRow', 'selectRow', 'deleteRow'],
+    items: [
+      'insertRowAbove',
+      'insertRowBelow',
+      'moveRowUp',
+      'moveRowDown',
+      'duplicateRow',
+      'equalRowHeights',
+      'selectRow',
+      'deleteRow',
+    ],
   },
   {
     kind: 'items',
@@ -41,6 +50,7 @@ const BUTTON_SPECS: ButtonSpec[] = [
       'moveColumnRight',
       'duplicateColumn',
       'equalColumnWidths',
+      'fitToContent',
       'selectColumn',
       'deleteColumn',
     ],
@@ -48,6 +58,7 @@ const BUTTON_SPECS: ButtonSpec[] = [
   { kind: 'merge' },
   { kind: 'separator' },
   { kind: 'item', item: 'headerRow', icon: 'headerRow' },
+  { kind: 'item', item: 'headerColumn', icon: 'headerColumn' },
   { kind: 'item', item: 'cellProperties', icon: 'cellProperties' },
   { kind: 'item', item: 'tableProperties', icon: 'tableProperties' },
   { kind: 'separator' },
@@ -84,6 +95,11 @@ const withoutLooseSeparators = (specs: ButtonSpec[]): ButtonSpec[] => {
   return keptSpecs
 }
 
+const TOGGLE_ATTRIBUTES: Partial<Record<TableMenuItemName, string>> = {
+  headerRow: 'data-header',
+  headerColumn: 'data-header-column',
+}
+
 const NEXT_BUTTON_KEYS: Record<string, (position: number, count: number) => number> = {
   ArrowRight: (position, count) => (position + 1) % count,
   ArrowLeft: (position, count) => (position - 1 + count) % count,
@@ -102,7 +118,7 @@ export class ActionBar {
   #handlers: ActionBarHandlers
   #bar: HTMLDivElement
   #mergeButton: HTMLButtonElement | null = null
-  #headerButton: HTMLButtonElement | null = null
+  #toggleButtons: [button: HTMLButtonElement, tableAttribute: string][] = []
   #tableElement: HTMLTableElement | null = null
   #activeCell: HTMLTableCellElement | null = null
   #dismissedCell: HTMLTableCellElement | null = null
@@ -178,7 +194,11 @@ export class ActionBar {
     this.#activeCell = startCellElement
     this.#tableElement = tableElement
     this.#showMergeState(spansSeveralCells, isMergedCell)
-    this.#headerButton?.setAttribute('aria-pressed', String(tableElement.hasAttribute('data-header')))
+
+    for (const [button, tableAttribute] of this.#toggleButtons) {
+      button.setAttribute('aria-pressed', String(tableElement.hasAttribute(tableAttribute)))
+    }
+
     this.#bar.style.display = 'flex'
     this.#reposition(movedToAnotherCell && !this.#handlers.isAnythingOpen())
   }
@@ -259,8 +279,10 @@ export class ActionBar {
         this.#toggle(button, event, () => this.#handlers.runItem(spec.item, button)),
       )
 
-      if (spec.item === 'headerRow') {
-        this.#headerButton = button
+      const tableAttribute = TOGGLE_ATTRIBUTES[spec.item]
+
+      if (tableAttribute) {
+        this.#toggleButtons.push([button, tableAttribute])
         button.setAttribute('aria-pressed', 'false')
       }
     } else {

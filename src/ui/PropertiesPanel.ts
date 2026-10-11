@@ -8,13 +8,16 @@ export interface ColorsField extends ColorChoice {
   kind: 'colors'
 }
 
-export interface ChoicesField {
-  kind: 'choices'
+export interface ChoiceGroup {
   label: string
   value: string
   options: PanelOption[]
-  color?: ColorChoice
   onChange: (value: string) => void
+}
+
+export interface ChoicesField extends ChoiceGroup {
+  kind: 'choices'
+  color?: ColorChoice
 }
 
 // Choosing the attached color also turns the toggle on
@@ -30,10 +33,13 @@ export interface TextField {
   kind: 'text'
   label: string
   value: string
+  choices?: ChoiceGroup
   onChange: (text: string) => void
 }
 
 export type PanelField = ColorsField | ChoicesField | ToggleField | TextField
+
+const PALETTE_MOTION_MS = 200
 
 const fieldLabel = (label: string) => createElement('div', { className: 'qlt-field-label', textContent: label })
 
@@ -48,6 +54,7 @@ export class PropertiesPanel {
   readonly popover: Popover
   #chevronIcon: string
   #collapseOpenPalette: (() => void) | null = null
+  #refitFrame = 0
 
   constructor(container: HTMLElement, chevronIcon: string) {
     this.popover = new Popover(container, 'qlt-properties')
@@ -90,9 +97,24 @@ export class PropertiesPanel {
         this.#collapseOpenPalette?.()
         this.#collapseOpenPalette = collapse
       },
-      onToggle: () => this.popover.refit(),
+      onToggle: () => this.#refitWhilePaletteMoves(),
       onChoose,
     })
+  }
+
+  // The palette grows and shrinks over a few frames, and the panel has to stay inside the editor the whole time
+  #refitWhilePaletteMoves(): void {
+    cancelAnimationFrame(this.#refitFrame)
+
+    const stopAt = performance.now() + PALETTE_MOTION_MS + 50
+
+    const refit = () => {
+      this.popover.refit()
+
+      if (performance.now() < stopAt) this.#refitFrame = requestAnimationFrame(refit)
+    }
+
+    refit()
   }
 
   #createColorsField(field: ColorsField): HTMLDivElement {
@@ -104,10 +126,22 @@ export class PropertiesPanel {
     return fieldElement
   }
 
-  #createChoicesField({ label, value, options, color, onChange }: ChoicesField): HTMLDivElement {
+  #createChoicesField(field: ChoicesField): HTMLDivElement {
     const fieldElement = createElement('div', { className: 'qlt-field' })
+    const colorControl = field.color && this.#colorControl(field.color)
+
+    fieldElement.append(
+      fieldLabel(field.label),
+      fieldRow(this.#choiceGroup(field), ...(colorControl ? [colorControl.button] : [])),
+    )
+
+    if (colorControl) fieldElement.append(colorControl.palette)
+
+    return fieldElement
+  }
+
+  #choiceGroup({ label, value, options, onChange }: ChoiceGroup): HTMLDivElement {
     const choiceGroup = createElement('div', { className: 'qlt-choices' }, { role: 'group', 'aria-label': label })
-    const colorControl = color && this.#colorControl(color)
 
     const choiceButtons = options.map((option) => {
       const choiceButton = createElement(
@@ -127,11 +161,8 @@ export class PropertiesPanel {
     })
 
     choiceGroup.append(...choiceButtons)
-    fieldElement.append(fieldLabel(label), fieldRow(choiceGroup, ...(colorControl ? [colorControl.button] : [])))
 
-    if (colorControl) fieldElement.append(colorControl.palette)
-
-    return fieldElement
+    return choiceGroup
   }
 
   #createToggle({ label, value, color, onChange }: ToggleField): HTMLDivElement {
@@ -153,9 +184,13 @@ export class PropertiesPanel {
     return fieldElement
   }
 
-  #createTextField({ label, value, onChange }: TextField): HTMLLabelElement {
-    const fieldElement = createElement('label', { className: 'qlt-field' })
-    const textInput = createElement('input', { type: 'text', className: 'qlt-text-input', value })
+  #createTextField({ label, value, choices, onChange }: TextField): HTMLDivElement {
+    const fieldElement = createElement('div', { className: 'qlt-field' })
+    const textInput = createElement(
+      'input',
+      { type: 'text', className: 'qlt-text-input', value },
+      { 'aria-label': label },
+    )
 
     textInput.addEventListener('change', () => onChange(textInput.value))
     textInput.addEventListener('keydown', (event) => {
@@ -164,7 +199,7 @@ export class PropertiesPanel {
       event.preventDefault()
       onChange(textInput.value)
     })
-    fieldElement.append(fieldLabel(label), textInput)
+    fieldElement.append(fieldLabel(label), fieldRow(textInput, ...(choices ? [this.#choiceGroup(choices)] : [])))
 
     return fieldElement
   }

@@ -20,9 +20,11 @@ export const tableMenuItems = (
     moveColumnRight: { enabled: canMoveColumns(model, selectedArea, 1) },
     equalColumnWidths: { enabled: !hasEqualColumns(model) },
     fitToWidth: { enabled: model.columnWidths != null },
+    equalRowHeights: { enabled: model.rowCount > 1 },
     mergeCells: { enabled: canMerge(tableContext) },
     splitCell: { enabled: canSplit(tableContext) },
     headerRow: { checked: model.header },
+    headerColumn: { checked: model.headerColumn },
   }
 
   const menuGroups = MENU_GROUPS.map((menuGroup) =>

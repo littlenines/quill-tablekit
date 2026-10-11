@@ -7,6 +7,7 @@ import { hasTableLines, toCellLines } from './clipboard'
 import { deleteSelectedContent, pasteTableIntoCells, selectedCellsContext } from './commands'
 import { getTableContext } from './context'
 import { lastSelectedLine, lineAt, needsTableAwareDelete, pickFormats, tableOf } from './selection'
+import { parseTabSeparated, tableFromTexts } from './tabSeparated'
 
 const HTML_TABLE_CELL = /<t[dh][\s>]/i
 
@@ -61,6 +62,12 @@ const handleCut = (quill: Quill, event: ClipboardEvent): void => {
   deleteSelectedContent(quill, range)
 }
 
+const tableFromPlainText = (pastedText: string): Delta | null => {
+  const rows = parseTabSeparated(pastedText)
+
+  return rows && tableFromTexts(rows).toDelta()
+}
+
 const tableContextForPaste = (quill: Quill, range: Range) => {
   const startLine = lineAt(quill, range.index)
   const endLine = lastSelectedLine(quill, range)
@@ -89,10 +96,11 @@ const handlePaste = (quill: Quill, event: ClipboardEvent, pasteLimits: PasteLimi
   event.preventDefault()
 
   const pastedContent = quill.clipboard.convert({ html: pastedHTML, text: pastedText })
-  const targetTable = hasTableLines(pastedContent) ? tableContextForPaste(quill, range) : null
+  const pastedTable = hasTableLines(pastedContent) ? pastedContent : tableFromPlainText(pastedText)
+  const targetTable = pastedTable ? tableContextForPaste(quill, range) : null
 
-  if (targetTable) {
-    pasteTableIntoCells(quill, targetTable, pastedContent, pasteLimits)
+  if (pastedTable && targetTable) {
+    pasteTableIntoCells(quill, targetTable, pastedTable, pasteLimits)
     quill.scrollSelectionIntoView()
 
     return

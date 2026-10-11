@@ -18,7 +18,9 @@ export interface TableKitLabels {
   duplicateRow: string
   duplicateColumn: string
   equalColumnWidths: string
+  fitToContent: string
   fitToWidth: string
+  equalRowHeights: string
   insertParagraphAbove: string
   insertParagraphBelow: string
   selectRow: string
@@ -27,6 +29,7 @@ export interface TableKitLabels {
   mergeCells: string
   splitCell: string
   headerRow: string
+  headerColumn: string
   cellProperties: string
   tableProperties: string
   deleteRow: string
@@ -46,6 +49,7 @@ export interface TableKitLabels {
   stripeColor: string
   defaultColor: string
   caption: string
+  captionSide: string
   noColor: string
   customColor: string
   colorCode: string
@@ -71,10 +75,10 @@ export const MENU_GROUPS = [
   ['insertRowAbove', 'insertRowBelow', 'insertColumnLeft', 'insertColumnRight'],
   ['moveRowUp', 'moveRowDown', 'moveColumnLeft', 'moveColumnRight', 'duplicateRow', 'duplicateColumn'],
   ['insertParagraphAbove', 'insertParagraphBelow'],
-  ['equalColumnWidths', 'fitToWidth'],
+  ['equalColumnWidths', 'fitToContent', 'fitToWidth', 'equalRowHeights'],
   ['selectRow', 'selectColumn', 'copyTable'],
   ['mergeCells', 'splitCell'],
-  ['headerRow', 'cellProperties', 'tableProperties'],
+  ['headerRow', 'headerColumn', 'cellProperties', 'tableProperties'],
   ['deleteRow', 'deleteColumn', 'deleteTable'],
 ] as const
 
@@ -89,6 +93,7 @@ export interface TableKitOptions {
   maxColumns?: number
   contextMenu?: boolean
   resizable?: boolean
+  responsiveWidths?: boolean
   actionBar?: boolean
   minColumnWidth?: number
   menu?: TableMenuItemName[]
@@ -119,7 +124,9 @@ export const DEFAULT_LABELS = {
   duplicateRow: 'Duplicate row',
   duplicateColumn: 'Duplicate column',
   equalColumnWidths: 'Equal column widths',
+  fitToContent: 'Fit columns to content',
   fitToWidth: 'Fit table to width',
+  equalRowHeights: 'Equal row heights',
   insertParagraphAbove: 'Insert paragraph above table',
   insertParagraphBelow: 'Insert paragraph below table',
   selectRow: 'Select row',
@@ -128,6 +135,7 @@ export const DEFAULT_LABELS = {
   mergeCells: 'Merge cells',
   splitCell: 'Split cell',
   headerRow: 'Header row',
+  headerColumn: 'Header column',
   cellProperties: 'Cell properties',
   tableProperties: 'Table properties',
   deleteRow: 'Delete row',
@@ -147,6 +155,7 @@ export const DEFAULT_LABELS = {
   stripeColor: 'Stripe color',
   defaultColor: 'Default',
   caption: 'Caption',
+  captionSide: 'Caption position',
   noColor: 'No color',
   customColor: 'Custom color',
   colorCode: 'Color code',
@@ -191,6 +200,7 @@ export const DEFAULT_OPTIONS = {
   maxColumns: 30,
   contextMenu: false,
   resizable: true,
+  responsiveWidths: true,
   actionBar: true,
   minColumnWidth: 40,
   menu: [...MENU_ITEM_NAMES],
@@ -225,6 +235,7 @@ export const resolveOptions = (userOptions: TableKitOptions = {}): ResolvedTable
   maxColumns: positiveWholeNumberOr(userOptions.maxColumns, DEFAULT_OPTIONS.maxColumns),
   contextMenu: userOptions.contextMenu ?? DEFAULT_OPTIONS.contextMenu,
   resizable: userOptions.resizable ?? DEFAULT_OPTIONS.resizable,
+  responsiveWidths: userOptions.responsiveWidths ?? DEFAULT_OPTIONS.responsiveWidths,
   actionBar: userOptions.actionBar ?? DEFAULT_OPTIONS.actionBar,
   minColumnWidth: positiveWholeNumberOr(userOptions.minColumnWidth, DEFAULT_OPTIONS.minColumnWidth),
   menu: menuItemsOr(userOptions.menu, DEFAULT_OPTIONS.menu),

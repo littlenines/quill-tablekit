@@ -49,7 +49,7 @@ describe('copying cells', () => {
   })
 
   it('copies only the widths of the copied columns', () => {
-    const { quill, tableKit } = setupWithTable(2, 3)
+    const { quill, tableKit } = setupWithTable(2, 3, { responsiveWidths: false })
 
     tableKit.setColumnWidths(tables(quill)[0], [100, 150, 200])
     selectCells(quill, 1, 5)

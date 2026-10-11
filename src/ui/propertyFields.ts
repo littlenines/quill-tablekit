@@ -3,6 +3,7 @@ import type { ResolvedTableKitOptions, TableKitLabels } from '../config/options'
 import type {
   BorderStyle,
   CellPadding,
+  CaptionSide,
   CellProperties,
   TableAlign,
   TableProperties,
@@ -131,6 +132,20 @@ export const tablePropertyFields = (
       color: stripeColor,
       onChange: (striped) => applyChanges({ striped }),
     },
-    { kind: 'text', label: labels.caption, value: current.caption, onChange: (caption) => applyChanges({ caption }) },
+    {
+      kind: 'text',
+      label: labels.caption,
+      value: current.caption,
+      choices: {
+        label: labels.captionSide,
+        value: current.captionSide,
+        options: [
+          { value: 'top', label: labels.alignTop },
+          { value: 'bottom', label: labels.alignBottom },
+        ],
+        onChange: (captionSide) => applyChanges({ captionSide: captionSide as CaptionSide }),
+      },
+      onChange: (caption) => applyChanges({ caption }),
+    },
   ]
 }

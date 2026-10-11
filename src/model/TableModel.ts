@@ -5,7 +5,14 @@ import { emptyCell, type CellData } from './cell'
 import { makeId, normalizeCellValue, type TableCellValue } from './cellValue'
 import { cellAreas, cellsInArea, expandToWholeCells, placeCells, type CellArea, type SpannedCell } from './grid'
 import { sumOf } from './layout'
-import { withoutEmptyValues, type BorderStyle, type CellPadding, type CellStyle, type TableAlign } from './properties'
+import {
+  withoutEmptyValues,
+  type BorderStyle,
+  type CellPadding,
+  type CellStyle,
+  type TableAlign,
+  type WidthUnit,
+} from './properties'
 
 export interface PlacedCell {
   cell: CellData
@@ -32,8 +39,10 @@ export class TableModel {
   rowIds: string[]
   grid: CellData[][]
   columnWidths: number[] | null
+  widthUnit: WidthUnit = 'px'
   rowHeights: (number | undefined)[]
   header = false
+  headerColumn = false
   tableAlign: TableAlign | undefined
   borderColor: string | undefined
   borderStyle: BorderStyle | undefined
@@ -41,6 +50,7 @@ export class TableModel {
   striped = false
   stripeColor: string | undefined
   caption: string | undefined
+  captionSide: 'bottom' | undefined
 
   constructor(tableId: string, rowIds: string[], grid: CellData[][], columnWidths: number[] | null) {
     this.tableId = tableId
@@ -113,8 +123,10 @@ export class TableModel {
     const storedWidths = cellGroups.find(({ cellValue }) => cellValue.widths)?.cellValue.widths
 
     model.setColumnWidths(storedWidths ?? null)
+    model.widthUnit = firstCellValue?.widthUnit ?? 'px'
     model.rowHeights = rowHeights.slice(0, model.rowCount)
     model.header = firstCellValue?.header === true
+    model.headerColumn = firstCellValue?.headerColumn === true
     model.tableAlign = firstCellValue?.tableAlign
     model.borderColor = firstCellValue?.borderColor
     model.borderStyle = firstCellValue?.borderStyle
@@ -122,6 +134,7 @@ export class TableModel {
     model.striped = firstCellValue?.striped === true
     model.stripeColor = firstCellValue?.stripeColor
     model.caption = firstCellValue?.caption
+    model.captionSide = firstCellValue?.captionSide
 
     return model
   }
@@ -212,12 +225,14 @@ export class TableModel {
     }))
   }
 
-  toDelta(): Delta {
+  toDelta(savedWidths = this.columnWidths): Delta {
     let tableDelta = new Delta()
 
     const tableFields = withoutEmptyValues({
-      widths: this.columnWidths ? [...this.columnWidths] : undefined,
+      widths: savedWidths ? [...savedWidths] : undefined,
+      widthUnit: savedWidths && this.widthUnit === 'percent' ? ('percent' as const) : undefined,
       header: this.header || undefined,
+      headerColumn: this.headerColumn || undefined,
       tableAlign: this.tableAlign,
       borderColor: this.borderColor,
       borderStyle: this.borderStyle,
@@ -225,6 +240,7 @@ export class TableModel {
       striped: this.striped || undefined,
       stripeColor: this.stripeColor,
       caption: this.caption,
+      captionSide: this.captionSide,
     })
 
     for (const { cell, row, rowspan, colspan } of this.orderedCells()) {

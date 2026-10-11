@@ -1,4 +1,3 @@
-import type Quill from 'quill'
 import { readCellValue } from '../model/cellValue'
 import type { TableAlign } from '../model/properties'
 import { cellAreas, combineAreas, expandToWholeCells, placeCells, type CellArea } from '../model/grid'
@@ -7,7 +6,6 @@ import { indexes } from '../utils/array'
 export type DomGrid = (HTMLTableCellElement | null)[][]
 
 const FALLBACK_COLUMN_WIDTH = 100
-const TABLE_BORDER_ALLOWANCE = 2
 
 export const tableGrid = (tableElement: HTMLTableElement): DomGrid => {
   const rows = Array.from(tableElement.rows, (rowElement) =>
@@ -117,6 +115,32 @@ export const measureColumnWidths = (grid: DomGrid): number[] => {
   })
 }
 
+export interface SavedWidths {
+  widths: number[] | undefined
+  isPercent: boolean
+}
+
+export const savedColumnWidths = (tableElement: HTMLElement): SavedWidths => {
+  const firstLineElement = tableElement.querySelector<HTMLElement>('.qlt-cell-line')
+  const cellValue = firstLineElement ? readCellValue(firstLineElement) : null
+
+  return { widths: cellValue?.widths, isPercent: cellValue?.widthUnit === 'percent' }
+}
+
+// Starting a drag from the saved widths keeps it exact. With border-collapse, the measured columns add up
+// to a little less than the table, so measuring every time would shrink the table a bit with each drag.
+export const startColumnWidths = (tableElement: HTMLTableElement, editorWidth: number): number[] => {
+  const grid = tableGrid(tableElement)
+  const { widths, isPercent } = savedColumnWidths(tableElement)
+
+  if (!widths || widths.length !== (grid[0]?.length ?? 0)) return measureColumnWidths(grid)
+  if (!isPercent) return widths
+
+  return Number.isFinite(editorWidth)
+    ? widths.map((percent) => (percent * editorWidth) / 100)
+    : measureColumnWidths(grid)
+}
+
 export const measureRowHeights = (tableElement: HTMLTableElement): number[] => {
   const scale = scaleOf(tableElement)
 
@@ -149,14 +173,6 @@ export const naturalRowHeight = (rowElement: HTMLTableRowElement, minHeight: num
   const scale = scaleOf(rowElement.closest('table'))
 
   return Math.ceil(Math.max(minHeight, ...singleRowCells.map((cellElement) => naturalCellHeight(cellElement, scale))))
-}
-
-export const editorContentWidth = (quill: Quill): number => {
-  const { paddingLeft, paddingRight } = getComputedStyle(quill.root)
-  const contentWidth =
-    quill.root.clientWidth - (Number.parseFloat(paddingLeft) || 0) - (Number.parseFloat(paddingRight) || 0)
-
-  return contentWidth > 0 ? Math.floor(contentWidth) - TABLE_BORDER_ALLOWANCE : Infinity
 }
 
 export const tableAlignmentOf = ({ style }: HTMLTableElement): TableAlign => {

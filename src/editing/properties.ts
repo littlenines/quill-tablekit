@@ -2,6 +2,7 @@ import { setTextAlign, updateCellStyle } from '../model/cellChanges'
 import {
   normalizeBorderStyle,
   normalizeCaption,
+  normalizeCaptionSide,
   normalizeCellPadding,
   normalizeColor,
   normalizeTableAlign,
@@ -34,9 +35,11 @@ export const changeCellProperties =
 export const changeTableProperties =
   (changes: Partial<TableProperties>): TableChange =>
   ({ model }) => {
-    const { header, align, borderColor, borderStyle, cellPadding, striped, stripeColor, background, caption } = changes
+    const { header, headerColumn, align, borderColor, borderStyle, cellPadding, striped, stripeColor } = changes
+    const { background, caption, captionSide } = changes
 
     if (header !== undefined) model.header = header
+    if (headerColumn !== undefined) model.headerColumn = headerColumn
     if (align !== undefined) model.tableAlign = normalizeTableAlign(align)
     if (borderColor !== undefined) model.borderColor = normalizeColor(borderColor)
     if (borderStyle !== undefined) model.borderStyle = normalizeBorderStyle(borderStyle)
@@ -44,6 +47,7 @@ export const changeTableProperties =
     if (striped !== undefined) model.striped = striped
     if (stripeColor !== undefined) model.stripeColor = normalizeColor(stripeColor)
     if (caption !== undefined) model.caption = normalizeCaption(caption)
+    if (captionSide !== undefined) model.captionSide = normalizeCaptionSide(captionSide)
     if (background !== undefined) updateCellStyle(allCellsOf(model), { background: normalizeColor(background) })
   }
 
@@ -68,6 +72,7 @@ export const readTableProperties = ({ model }: TableContext): TableProperties =>
 
   return {
     header: model.header,
+    headerColumn: model.headerColumn,
     align: model.tableAlign ?? 'left',
     borderColor: model.borderColor ?? null,
     borderStyle: model.borderStyle ?? 'solid',
@@ -76,5 +81,6 @@ export const readTableProperties = ({ model }: TableContext): TableProperties =>
     stripeColor: model.stripeColor ?? null,
     background: sharedBackground ?? null,
     caption: model.caption ?? '',
+    captionSide: model.captionSide ?? 'top',
   }
 }

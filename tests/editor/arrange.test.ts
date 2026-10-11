@@ -91,8 +91,8 @@ describe('column widths', () => {
     expect(cellLines(quill)[0].widths).toEqual([200, 200, 200])
   })
 
-  it('fits the table to the width of the editor', () => {
-    const { quill, tableKit } = setupWithTable(1, 2)
+  it('fits a px table to the width of the editor', () => {
+    const { quill, tableKit } = setupWithTable(1, 2, { responsiveWidths: false })
 
     Object.defineProperty(quill.root, 'clientWidth', { value: 602 })
     tableKit.setColumnWidths(quill.root.querySelector('table') as HTMLTableElement, [100, 300])
@@ -121,5 +121,42 @@ describe('column widths', () => {
     openBarMenu(host, 'Columns')
 
     expect(menuItem(host, 'Equal column widths')?.disabled).toBe(false)
+  })
+})
+
+describe('fitting', () => {
+  it('fits the columns to their content and keeps the table inside the editor', () => {
+    const { quill, tableKit } = setupWithTable(1, 3, { responsiveWidths: false })
+
+    Object.defineProperty(quill.root, 'clientWidth', { value: 252 })
+    quill.setSelection(0, 0)
+    tableKit.fitColumnsToContent()
+
+    const widths = cellLines(quill)[0].widths ?? []
+
+    expect(widths).toHaveLength(3)
+    expect(widths.reduce((total, width) => total + width, 0)).toBe(250)
+    expect(quill.root.parentElement?.querySelector('.qlt-measuring')).toBeNull()
+  })
+
+  it('makes every row the same height', () => {
+    const { quill, tableKit } = setupWithTable(3, 1)
+
+    quill.setSelection(0, 0)
+    tableKit.equalizeRowHeights()
+
+    const heights = [...new Set(cellLines(quill).map((cellValue) => cellValue.rowHeight))]
+
+    expect(heights).toHaveLength(1)
+    expect(heights[0]).toBeGreaterThan(0)
+  })
+
+  it('only offers Equal row heights with more than one row', () => {
+    const { quill, host } = setupWithTable(1, 1)
+
+    quill.setSelection(0, 0)
+    openBarMenu(host, 'Rows')
+
+    expect(menuItem(host, 'Equal row heights')?.disabled).toBe(true)
   })
 })

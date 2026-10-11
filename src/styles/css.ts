@@ -35,8 +35,8 @@ export const CSS = `
   padding: ${CELL_PADDING_STYLES.wide};
 }
 
-.ql-editor table.qlt-table[data-striped]:not([data-header]) > tbody > tr:nth-child(even) > td.qlt-cell,
-.ql-editor table.qlt-table[data-striped][data-header] > tbody > tr:nth-child(odd):not(:first-child) > td.qlt-cell {
+.ql-editor table.qlt-table[data-striped]:not([data-header]) > tbody > tr:nth-child(even) > td.qlt-cell:not([data-first-column]),
+.ql-editor table.qlt-table[data-striped][data-header] > tbody > tr:nth-child(odd):not(:first-child) > td.qlt-cell:not([data-first-column]) {
   background-color: var(--qlt-table-stripe, var(--qlt-stripe-bg, ${STRIPE_BACKGROUND}));
 }
 
@@ -49,9 +49,31 @@ export const CSS = `
   color: #555;
 }
 
-.ql-editor table.qlt-table[data-header] > tbody > tr:first-child > td.qlt-cell {
+.ql-editor table.qlt-table[data-caption][data-caption-side='bottom']::before {
+  caption-side: bottom;
+}
+
+.ql-editor table.qlt-table[data-header] > tbody > tr:first-child > td.qlt-cell,
+.ql-editor table.qlt-table[data-header-column] td.qlt-cell[data-first-column] {
   font-weight: bold;
   background-color: var(--qlt-header-bg, ${HEADER_BACKGROUND});
+}
+
+.qlt-measuring {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 10000px !important;
+  height: auto !important;
+  overflow: hidden !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.qlt-measuring table.qlt-table {
+  table-layout: auto;
+  width: auto;
+  margin: 0;
 }
 
 .qlt-cells-selected .qlt-table ::selection {
@@ -456,9 +478,18 @@ body.qlt-resizing-past-limit * {
 }
 
 .qlt-field-row > .qlt-choices,
-.qlt-field-row > .qlt-toggle {
+.qlt-field-row > .qlt-toggle,
+.qlt-field-row > .qlt-text-input {
   flex: 1;
   min-width: 0;
+}
+
+.qlt-field-row > .qlt-text-input + .qlt-choices {
+  flex: none;
+}
+
+.qlt-field-row > .qlt-text-input + .qlt-choices > .qlt-choice {
+  padding: 4px 8px;
 }
 
 .qlt-color-button {
@@ -497,14 +528,45 @@ body.qlt-resizing-past-limit * {
 }
 
 .qlt-palette {
+  display: grid;
+  grid-template-rows: 1fr;
   margin-top: 6px;
+  opacity: 1;
+  transition:
+    grid-template-rows 0.2s ease,
+    margin-top 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.qlt-palette[hidden] {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.2s ease,
+    margin-top 0.2s ease,
+    opacity 0.15s ease,
+    visibility 0s linear 0.2s;
+}
+
+.qlt-palette-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.qlt-palette-body {
   padding: 8px;
   background: #f6f7f9;
   border-radius: 6px;
 }
 
-.qlt-palette[hidden] {
-  display: none;
+@media (prefers-reduced-motion: reduce) {
+  .qlt-palette,
+  .qlt-palette[hidden] {
+    transition: none;
+  }
 }
 
 .qlt-colors {

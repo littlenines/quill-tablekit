@@ -48,6 +48,7 @@ When the cursor is in a table, a small bar with buttons shows up next to the cel
 | Columns          | The same for columns, plus Equal column widths.                                  |
 | Merge / Split    | Merges the selected cells. If you're in a merged cell, it becomes Split instead. |
 | Header row       | Turns the header row on or off. The button stays pressed while it's on.          |
+| Header column    | The same for the first column.                                                   |
 | Cell properties  | Opens the panel for the selected cells.                                          |
 | Table properties | Opens the panel for the whole table.                                             |
 | More             | Insert a paragraph above or below the table, fit it to the width, copy it.       |
@@ -76,7 +77,7 @@ Click the table button in the toolbar while the cursor is in a table. You get ev
 - Equal column widths, Fit table to width
 - Select row / column, Copy table
 - Merge cells / Split cell
-- Header row
+- Header row, Header column
 - Cell properties / Table properties
 - Delete row / column / table
 
@@ -108,11 +109,13 @@ If a table is the first thing in the document, there's no line above it to click
 
 **Select row** selects every cell in the row the cursor is in, and **Select column** does the same for the column. If you've already selected a few cells, it selects all the rows or columns they touch. After that you can merge them, delete them, or change their properties.
 
-## Header row
+## Header row and header column
 
 **Header row** turns the first row into a header: it's bold and has a light gray background. Click it again to turn it off. While it's on, there's a check mark next to it in the menu.
 
-In the HTML from `getSemanticHTML()`, the first row's cells come out as `<th>` instead of `<td>`. If you insert a row above the header, the new row becomes the header.
+**Header column** does the same for the first column, for tables where each row has a name, like a pricing or comparison table. You can use both together.
+
+In the HTML from `getSemanticHTML()`, header cells come out as `<th>` instead of `<td>`: `<th scope="col">` in the header row and `<th scope="row">` in the header column, so screen readers know which cells they label. The header row also goes in its own `<thead>`, so when a long table is printed the header repeats at the top of every page, and Word or Google Docs keep it as a header row when you paste the HTML there. If you insert a row above the header row or a column left of the header column, the new one becomes the header. Striped rows leave the header column alone.
 
 ## Cell and table properties
 
@@ -129,7 +132,7 @@ In the HTML from `getSemanticHTML()`, the first row's cells come out as `<th>` i
 - **Cell spacing**: how much room there is around the text in each cell: compact, normal or wide.
 - **Background**: colors every cell at once.
 - **Striped rows**: every other row gets a light gray background, which makes long tables easier to read. With a header row, the stripes start under it. A cell with its own background keeps it. The color button next to it picks another stripe color, and picking one turns stripes on. **Default** goes back to the light gray.
-- **Caption**: a short title above the table. Type it and press Enter. It's saved as a `<caption>`, which screen readers read out, so it's a good way to say what the table is about. Empty the box to remove it.
+- **Caption**: a short title for the table. Type it and press Enter. **Top** and **Bottom** next to the box put it above or under the table, like "Table 1: Sales by region" under it in a report. It's saved as a `<caption>`, which screen readers read out the same way in either position, so it's a good way to say what the table is about. Empty the box to remove it.
 
 Every click changes the table right away, and the panel stays open so you can change a few things in a row. Click outside it or press Escape to close it. Each change is one undo step.
 
@@ -181,16 +184,29 @@ While you drag, the table stays as it is and only a blue line (or a dashed outli
 
 Widths and heights are saved with the content, and each drag is one undo step. If you don't want any resizing, set `resizable: false`.
 
-Resizing also works when the editor is zoomed with CSS, like `transform: scale(0.8)` on a parent element. The lines and the outline stay under the mouse, and the sizes are saved in normal pixels.
+### Responsive widths
 
-### Equal widths and fitting the editor
+A resize saves the widths as a share of the editor. A table you drag to two thirds of the editor stays two thirds of it, whatever width the editor has when the content is shown (on a phone, say). The columns keep their proportions too.
 
-After some dragging, two items in the menu clean things up:
+If you need exact pixel widths instead, set `responsiveWidths: false`. Dragging works exactly the same, only what's saved is different: the table then keeps its pixel width, even when the editor gets narrower later.
+
+- A new table is full width either way, until you resize it.
+- The option decides what a resize saves. Tables saved in percent show in percent everywhere, also in an editor with `responsiveWidths: false`, and px tables stay px. Resizing a table saves it in the unit of the editor you're in.
+- **Fit table to width** on a percent table makes it exactly 100%.
+- The saved HTML has the same percentages, so the table is responsive outside the editor too.
+
+Resizing also works when the editor is zoomed with CSS, like `transform: scale(0.8)` on a parent element. The lines and the outline stay under the mouse, and the sizes are saved as if the editor weren't zoomed.
+
+### Equal sizes and fitting
+
+After some dragging, a few menu items clean things up:
 
 - **Equal column widths** (under Columns) makes every column the same width, without changing how wide the table is.
+- **Fit columns to content** (under Columns) makes each column as wide as its longest line, like Word's AutoFit. Short columns like numbers or ids get narrow, and long text gets the room. If that's wider than the editor, all columns shrink by the same share, so the table still fits. A column never gets narrower than `minColumnWidth`.
 - **Fit table to width** (under More) makes the table exactly as wide as the editor. The columns keep their proportions.
+- **Equal row heights** (under Rows) makes every row the same height: the average height, or the tallest row's content if that's more, so no text gets cut off.
 
-Both are grayed out when there's nothing to do, for example on a new table, which already fills the editor with equal columns.
+Equal column widths and Fit table to width are grayed out when there's nothing to do, for example on a new table, which already fills the editor with equal columns. Each of these is one undo step.
 
 ## Keyboard
 
@@ -217,6 +233,14 @@ Select a few cells (drag, or click and Shift+click) and press Ctrl+C. You get ex
 The clipboard gets two versions: a small HTML table for editors, and plain text with tabs between cells and a new line for each row. Paste that into Excel or Google Sheets and every cell lands in its own cell.
 
 **Copy table** in the menu copies the whole table that way.
+
+### Pasting text with tabs
+
+Text where the cells are separated by tabs, from a CSV-like file, a plain-text app, or a browser that only gives plain text, works the same way: pasted into a cell, it fills the cells to the right and below, adding rows and columns if needed.
+
+- Cells in quotes are understood the way spreadsheets write them: a quoted cell can contain tabs and line breaks, and `""` is a quote. A line break inside a cell becomes a second line in that cell.
+- The text only counts as cells if every line has the same number of them. Otherwise, like code indented with tabs, it's pasted as normal text into the one cell.
+- Outside a table, text with tabs is pasted as normal text.
 
 ### Pasting a table into a table
 

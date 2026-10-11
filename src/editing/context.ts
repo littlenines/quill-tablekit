@@ -6,6 +6,7 @@ import type { CellData } from '../model/cell'
 import { TableModel } from '../model/TableModel'
 import type { Delta } from '../utils/quill'
 import { lastSelectedLine, lineAt, tableOf } from './selection'
+import { percentBasis, useLayoutPixels } from './widthUnits'
 
 export interface TableContext {
   tableBlot: TableContainer
@@ -21,6 +22,8 @@ export const readTable = (quill: Quill, tableBlot: TableContainer): TableContext
   const tableStart = quill.getIndex(tableBlot)
   const originalContents = quill.getContents(tableStart, tableBlot.length())
   const model = TableModel.fromDelta(originalContents)
+
+  useLayoutPixels(model, percentBasis(quill))
 
   return {
     tableBlot,

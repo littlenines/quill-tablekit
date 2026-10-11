@@ -17,12 +17,15 @@ import {
   readTableProperties,
 } from './editing/properties'
 import { isInTable } from './editing/selection'
-import type { CellProperties, TableProperties } from './model/properties'
+import { percentBasis } from './editing/widthUnits'
+import type { CellProperties, TableProperties, WidthUnit } from './model/properties'
+import { fitColumnWidthsWithin } from './model/layout'
 import { equalizeColumnWidths, fitToWidth } from './model/widths'
 import { injectStyles } from './styles/injectStyles'
 import { CellSelection } from './ui/CellSelection'
 import { ColumnResizer } from './ui/ColumnResizer'
-import { editorContentWidth } from './ui/domGrid'
+import { contentColumnWidths, equalRowHeight } from './ui/fitting'
+import { editorContentWidth } from './utils/editorWidth'
 import { RowResizer } from './ui/RowResizer'
 import { TableControls } from './ui/TableControls'
 import { TableResizer } from './ui/TableResizer'
@@ -80,7 +83,7 @@ class TableKit extends Module<TableKitOptions> {
         ),
         new RowResizer(quill, container, (tableElement, rowHeights) => this.setRowHeights(tableElement, rowHeights)),
         new TableResizer(quill, container, minColumnWidth, (tableElement, layout) =>
-          commands.setTableLayout(quill, tableElement, layout),
+          commands.setTableLayout(quill, tableElement, layout, this.#widthUnit),
         ),
       ]
     }
@@ -156,11 +159,33 @@ class TableKit extends Module<TableKitOptions> {
   }
 
   fitTableToWidth(): void {
-    const editorWidth = editorContentWidth(this.quill)
+    commands.changeTable(this.quill, this.#currentRange(), ({ model }) => {
+      const tableWidth = model.widthUnit === 'percent' ? percentBasis(this.quill) : editorContentWidth(this.quill)
 
-    commands.changeTable(this.quill, this.#currentRange(), ({ model }) =>
-      fitToWidth(model, editorWidth, this.#settings.minColumnWidth),
-    )
+      fitToWidth(model, tableWidth, this.#settings.minColumnWidth)
+    })
+  }
+
+  fitColumnsToContent(): void {
+    const tableElement = this.#tableElementAtCursor()
+
+    if (!tableElement || !this.quill.isEnabled()) return
+
+    const contentWidths = contentColumnWidths(tableElement, this.quill.container)
+    const { minColumnWidth } = this.#settings
+    const columnWidths = fitColumnWidthsWithin(contentWidths, editorContentWidth(this.quill), minColumnWidth)
+
+    commands.setTableLayout(this.quill, tableElement, { columnWidths }, this.#widthUnit)
+  }
+
+  equalizeRowHeights(): void {
+    const tableElement = this.#tableElementAtCursor()
+
+    if (!tableElement || !this.quill.isEnabled()) return
+
+    const rowHeight = equalRowHeight(tableElement)
+
+    commands.setTableLayout(this.quill, tableElement, { rowHeights: Array.from(tableElement.rows, () => rowHeight) })
   }
 
   insertParagraphAbove(): void {
@@ -244,7 +269,7 @@ class TableKit extends Module<TableKitOptions> {
   }
 
   setColumnWidths(table: HTMLTableElement | TableContainer, columnWidths: number[] | null): void {
-    commands.setTableLayout(this.quill, table, { columnWidths })
+    commands.setTableLayout(this.quill, table, { columnWidths }, this.#widthUnit)
   }
 
   setRowHeights(table: HTMLTableElement | TableContainer, rowHeights: (number | null)[] | null): void {
@@ -270,6 +295,14 @@ class TableKit extends Module<TableKitOptions> {
     this.#controls = null
     this.#cellSelection = null
     this.#resizers = []
+  }
+
+  get #widthUnit(): WidthUnit {
+    return this.#settings.responsiveWidths ? 'percent' : 'px'
+  }
+
+  #tableElementAtCursor(): HTMLTableElement | null {
+    return (this.getContext()?.tableBlot.domNode as HTMLTableElement | undefined) ?? null
   }
 
   #edit(tableEdit: edits.TableEdit): void {

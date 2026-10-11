@@ -172,7 +172,13 @@ export const createColorControl = (
     setExpanded(willExpand)
   })
   swatchGroup.append(...swatches)
-  palette.append(swatchGroup, customColorRow.element)
+
+  const paletteClip = createElement('div', { className: 'qlt-palette-clip' })
+  const paletteBody = createElement('div', { className: 'qlt-palette-body' })
+
+  paletteBody.append(swatchGroup, customColorRow.element)
+  paletteClip.append(paletteBody)
+  palette.append(paletteClip)
 
   return { button, palette, collapse }
 }

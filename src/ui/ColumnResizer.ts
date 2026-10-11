@@ -2,17 +2,10 @@ import type Quill from 'quill'
 import { cellAreas } from '../model/grid'
 import { sumOf } from '../model/layout'
 import type { TableAlign } from '../model/properties'
+import { editorContentWidth, editorInnerWidth } from '../utils/editorWidth'
 import { createElement } from './dom'
 import { followMouseUntilRelease, isPastWidthLimit, showPastLimit } from './dragging'
-import {
-  editorContentWidth,
-  measureColumnWidths,
-  rowsBoxOf,
-  scaleOf,
-  tableAlignmentOf,
-  tableGrid,
-  toContainerPosition,
-} from './domGrid'
+import { rowsBoxOf, startColumnWidths, scaleOf, tableAlignmentOf, tableGrid, toContainerPosition } from './domGrid'
 
 const EDGE_GRAB_DISTANCE = 6
 
@@ -148,7 +141,7 @@ export class ColumnResizer {
     event.preventDefault()
 
     const { tableElement } = this.#hoveredEdge
-    const startWidths = measureColumnWidths(tableGrid(tableElement))
+    const startWidths = startColumnWidths(tableElement, editorInnerWidth(this.#quill))
 
     this.#activeDrag = {
       ...this.#hoveredEdge,

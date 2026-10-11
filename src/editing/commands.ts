@@ -5,12 +5,14 @@ import type { CellData } from '../model/cell'
 import { clearContent } from '../model/cellChanges'
 import { pasteTable, type PasteLimits } from '../model/paste'
 import { insertRow } from '../model/rowsAndColumns'
+import type { WidthUnit } from '../model/properties'
 import { TableModel } from '../model/TableModel'
 import { Delta } from '../utils/quill'
 import { getTableContext, readTable, type TableContext } from './context'
 import type { TableEdit } from './edits'
 import type { TableChange } from './properties'
 import { deleteSelection, lastSelectedLine, lineAt, needsTableAwareDelete, tableOf } from './selection'
+import { percentBasis, widthsToSave } from './widthUnits'
 
 export const updateWithHistory = (quill: Quill, documentChange: Delta): void => {
   quill.history.cutoff()
@@ -24,7 +26,7 @@ export const commitTable = (
   cellToFocus: CellData | null,
   caretOffset = 0,
 ): void => {
-  const updatedContents = model.isEmpty ? new Delta() : model.toDelta()
+  const updatedContents = model.isEmpty ? new Delta() : model.toDelta(widthsToSave(model, percentBasis(quill)))
   const contentChange = originalContents.diff(updatedContents)
 
   if (contentChange.ops.length > 0) updateWithHistory(quill, new Delta().retain(tableStart).concat(contentChange))
@@ -82,6 +84,7 @@ export const setTableLayout = (
   quill: Quill,
   table: HTMLTableElement | TableContainer,
   { columnWidths, rowHeights }: TableLayout,
+  widthUnit?: WidthUnit,
 ): void => {
   const tableBlot = table instanceof TableContainer ? table : Quill.find(table)
 
@@ -90,6 +93,7 @@ export const setTableLayout = (
   const tableContext = readTable(quill, tableBlot)
 
   if (columnWidths !== undefined) tableContext.model.setColumnWidths(columnWidths)
+  if (columnWidths !== undefined && widthUnit) tableContext.model.widthUnit = widthUnit
   if (rowHeights !== undefined) tableContext.model.setRowHeights(rowHeights)
 
   commitTable(quill, tableContext, null)

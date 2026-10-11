@@ -314,3 +314,41 @@ describe('compact color fields', () => {
     expect(paletteOf(stripeButton).querySelector('[aria-label="Default"]')).not.toBeNull()
   })
 })
+
+describe('caption position', () => {
+  it('puts the caption under the table and saves it in the HTML', () => {
+    const { quill, tableKit } = styledTable()
+
+    tableKit.setTableProperties({ captionSide: 'bottom' })
+
+    expect(tableKit.getTableProperties()?.captionSide).toBe('bottom')
+    expect(tables(quill)[0].dataset.captionSide).toBe('bottom')
+    expect(quill.getSemanticHTML()).toContain('<caption style="caption-side: bottom;">Sales</caption>')
+
+    tableKit.setTableProperties({ captionSide: 'top' })
+
+    expect(tables(quill)[0].hasAttribute('data-caption-side')).toBe(false)
+    expect(quill.getSemanticHTML()).toContain('<caption>Sales</caption>')
+  })
+
+  it('keeps a bottom caption when pasted, also from the old align attribute', () => {
+    const { quill, tableKit } = setup()
+
+    paste(quill, { 'text/html': '<table><caption align="bottom">Notes</caption><tr><td>a</td></tr></table>' })
+    quill.setSelection(0, 0)
+
+    expect(tableKit.getTableProperties()).toMatchObject({ caption: 'Notes', captionSide: 'bottom' })
+  })
+
+  it('can be picked next to the caption in the panel', () => {
+    const { quill, host, tableKit } = setupWithTable(1, 1)
+
+    quill.setSelection(0, 0)
+    host.querySelector<HTMLButtonElement>('.qlt-action-bar [aria-label="Table properties"]')?.click()
+    host
+      .querySelector<HTMLButtonElement>('.qlt-properties [aria-label="Caption position"] [aria-label="Bottom"]')
+      ?.click()
+
+    expect(tableKit.getTableProperties()?.captionSide).toBe('bottom')
+  })
+})

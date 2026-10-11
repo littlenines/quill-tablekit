@@ -4,6 +4,7 @@ export type { TableKitOptions, TableKitLabels, TableKitIcons, TableMenuItemName 
 export type { TableCellValue } from './model/cellValue'
 export type {
   BorderStyle,
+  CaptionSide,
   CellPadding,
   CellProperties,
   TableProperties,

@@ -14,6 +14,7 @@ new Quill('#editor', {
       contextMenu: false,
       actionBar: true,
       resizable: true,
+      responsiveWidths: true,
       minColumnWidth: 40,
       menu: ['insertRowAbove', 'insertRowBelow', 'mergeCells', 'splitCell', 'deleteTable'],
       colors: ['#ffffff', '#fff2cc', '#d9ead3'],
@@ -24,20 +25,21 @@ new Quill('#editor', {
 })
 ```
 
-| Option           | Default    | What it does                                                                          |
-| ---------------- | ---------- | ------------------------------------------------------------------------------------- |
-| `pickerRows`     | `8`        | Rows in the size picker grid.                                                         |
-| `pickerColumns`  | `10`       | Columns in the size picker grid.                                                      |
-| `maxRows`        | `100`      | Most rows you can insert at once.                                                     |
-| `maxColumns`     | `30`       | Most columns you can insert at once.                                                  |
-| `contextMenu`    | `false`    | Right-click on a cell opens the table menu instead of the browser's menu.             |
-| `actionBar`      | `true`     | Shows the bar with buttons next to the table while the cursor is in it.               |
-| `resizable`      | `true`     | Lets you drag borders to resize columns and rows, and the corner to resize the table. |
-| `minColumnWidth` | `40`       | Narrowest a column can be dragged, in px.                                             |
-| `menu`           | every item | Which items the table menu shows. See [Menu](#menu).                                  |
-| `colors`         | 15 colors  | The colors in the properties panel. See [Colors](#colors).                            |
-| `icons`          | built in   | Your own icons for the action bar and the table button. See [Icons](#icons).          |
-| `labels`         | English    | The text in the picker, the menu and the panel. See [Labels](#labels).                |
+| Option             | Default    | What it does                                                                                                |
+| ------------------ | ---------- | ----------------------------------------------------------------------------------------------------------- |
+| `pickerRows`       | `8`        | Rows in the size picker grid.                                                                               |
+| `pickerColumns`    | `10`       | Columns in the size picker grid.                                                                            |
+| `maxRows`          | `100`      | Most rows you can insert at once.                                                                           |
+| `maxColumns`       | `30`       | Most columns you can insert at once.                                                                        |
+| `contextMenu`      | `false`    | Right-click on a cell opens the table menu instead of the browser's menu.                                   |
+| `actionBar`        | `true`     | Shows the bar with buttons next to the table while the cursor is in it.                                     |
+| `resizable`        | `true`     | Lets you drag borders to resize columns and rows, and the corner to resize the table.                       |
+| `responsiveWidths` | `true`     | Saves resized widths as a share of the editor. `false` saves px. See [Usage](./usage.md#responsive-widths). |
+| `minColumnWidth`   | `40`       | Narrowest a column can be dragged, in px.                                                                   |
+| `menu`             | every item | Which items the table menu shows. See [Menu](#menu).                                                        |
+| `colors`           | 15 colors  | The colors in the properties panel. See [Colors](#colors).                                                  |
+| `icons`            | built in   | Your own icons for the action bar and the table button. See [Icons](#icons).                                |
+| `labels`           | English    | The text in the picker, the menu and the panel. See [Labels](#labels).                                      |
 
 If you pass something that isn't a positive number for the number options, the default is used.
 
@@ -68,13 +70,16 @@ The order in the menu stays the same no matter what order you list them in. Thes
 | `insertParagraphAbove` | Adds an empty line before the table.          |
 | `insertParagraphBelow` | Adds an empty line after the table.           |
 | `equalColumnWidths`    | Makes every column the same width.            |
+| `fitToContent`         | Makes each column as wide as its content.     |
 | `fitToWidth`           | Makes the table as wide as the editor.        |
+| `equalRowHeights`      | Makes every row the same height.              |
 | `selectRow`            | Selects the whole row.                        |
 | `selectColumn`         | Selects the whole column.                     |
 | `copyTable`            | Copies the whole table to the clipboard.      |
 | `mergeCells`           | Merges the selected cells.                    |
 | `splitCell`            | Splits a merged cell.                         |
 | `headerRow`            | Turns the header row on or off.               |
+| `headerColumn`         | Turns the header column on or off.            |
 | `cellProperties`       | Opens the panel for background and alignment. |
 | `tableProperties`      | Opens the panel for the whole table.          |
 | `deleteRow`            | Removes the selected rows.                    |
@@ -120,6 +125,7 @@ tableKit: {
 | `merge`           | Merge cells button                                                              |
 | `split`           | The same button when the cursor is in a merged cell                             |
 | `headerRow`       | Header row button                                                               |
+| `headerColumn`    | Header column button                                                            |
 | `cellProperties`  | Cell properties button                                                          |
 | `tableProperties` | Table properties button                                                         |
 | `more`            | More button                                                                     |
@@ -161,7 +167,9 @@ tableKit: {
 | `duplicateRow`         | Duplicate row                |
 | `duplicateColumn`      | Duplicate column             |
 | `equalColumnWidths`    | Equal column widths          |
+| `fitToContent`         | Fit columns to content       |
 | `fitToWidth`           | Fit table to width           |
+| `equalRowHeights`      | Equal row heights            |
 | `insertParagraphAbove` | Insert paragraph above table |
 | `insertParagraphBelow` | Insert paragraph below table |
 | `selectRow`            | Select row                   |
@@ -170,6 +178,7 @@ tableKit: {
 | `mergeCells`           | Merge cells                  |
 | `splitCell`            | Split cell                   |
 | `headerRow`            | Header row                   |
+| `headerColumn`         | Header column                |
 | `cellProperties`       | Cell properties              |
 | `tableProperties`      | Table properties             |
 | `deleteRow`            | Delete row                   |
@@ -189,6 +198,7 @@ tableKit: {
 | `stripeColor`          | Stripe color                 |
 | `defaultColor`         | Default                      |
 | `caption`              | Caption                      |
+| `captionSide`          | Caption position             |
 | `noColor`              | No color                     |
 | `customColor`          | Custom color                 |
 | `colorCode`            | Color code                   |
@@ -251,7 +261,7 @@ If you don't want the outline around the cell with the cursor, hide it:
 }
 ```
 
-In the editor, a table has data attributes for its style: `data-header`, `data-striped`, `data-border-style`, `data-cell-padding` and `data-caption`. So `.qlt-table[data-header] tr:first-child td` is the header row. The saved HTML doesn't have these attributes.
+In the editor, a table has data attributes for its style: `data-header`, `data-header-column`, `data-striped`, `data-border-style`, `data-cell-padding`, `data-caption` and `data-caption-side`. So `.qlt-table[data-header] tr:first-child td` is the header row. With a header column, its cells have `data-first-column`. The saved HTML doesn't have these attributes.
 
 ## TypeScript
 

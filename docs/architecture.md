@@ -41,6 +41,8 @@ src/
 │   ├── selection.ts      finding the table at the cursor, deleting without breaking tables
 │   ├── keyboard.ts       Tab, Up, Down, Backspace, Delete, Enter
 │   ├── verticalNavigation.ts Up and Down between cells
+│   ├── widthUnits.ts     turning percent widths into px while a table is edited, and back
+│   ├── tabSeparated.ts   reading pasted text with tabs as rows and cells
 │   ├── inputGuards.ts    copy, cut, paste, and typing over several cells
 │   ├── cellClipboard.ts  the clipboard content for a block of cells, and Copy table
 │   └── clipboard.ts      turning pasted <td> into table lines
@@ -78,11 +80,13 @@ src/
 │   ├── RowResizer.ts     the line you drag to resize a row
 │   ├── TableResizer.ts   the round corner handle you drag to resize the whole table
 │   ├── dragging.ts       following the mouse until it's released
+│   ├── fitting.ts        measuring the content's widths, and an equal row height
 │   ├── domGrid.ts        reading the table on screen as a grid, measuring columns
 │   └── dom.ts            small createElement helper
 └── utils/
     ├── quill.ts          Delta, Parchment and Module from Quill (see "The CDN build")
     ├── style.ts          setting an inline style only when it changes
+    ├── editorWidth.ts    how wide the editor's content is
     └── support.ts        checking the Quill version
 ```
 
@@ -96,7 +100,7 @@ The `<td>`, `<tr>`, `<tbody>` and `<table>` around the lines aren't stored anywh
 - Two containers next to each other merge when the lines on both sides of the edge have the same id (same cell, same row, same table). That's `checkMerge`.
 - A container splits where two lines next to each other have different ids. That's in `optimize`, through `splitWhereGroupIdChanges` in `grouping.ts`.
 
-So a list of lines is all it takes to build any table. The `<td>` copies `rowspan`, `colspan`, its background and vertical alignment from its first line. The `<table>` copies the header row, alignment and border color from its first line too. The header row is just a `data-header` attribute on the table, and CSS styles its first row.
+So a list of lines is all it takes to build any table. The `<td>` copies `rowspan`, `colspan`, its background and vertical alignment from its first line. The `<table>` copies the header row, alignment and border color from its first line too. The header row is just a `data-header` attribute on the table, and CSS styles its first row. The header column can't use `:first-child`, because a cell merged down from the row above pushes a row's first `<td>` into the second column. So `TableContainer` marks the cells that really are in the first column with `data-first-column`, using the same grid as the rest of the code.
 
 Inline styles are only set when they actually change (`utils/style.ts`). The browser rewrites colors, so `#fff2cc` reads back as `rgb(255, 242, 204)`. If we compared those directly, every check would look like a change, and every change makes Quill run `optimize` again.
 
@@ -167,6 +171,20 @@ When it steps in, it finds the cell in the next row under the cursor's x positio
 ## Pasted stripes
 
 A pasted table doesn't say it's striped, it just has colored cells. `findStripes` in `editing/clipboard.ts` looks for the pattern instead: under the header row, every other row has mostly one background, and the rows between don't have it at all. Then the table gets `striped` and that `stripeColor`, and those cells don't keep the color as their own background. One colored row isn't enough to tell stripes from a colored total row, so that needs two, unless it's the default stripe color.
+
+## Percent widths
+
+All the width math (resizing, inserting columns, equal widths) works in px. A table saved in percent is turned into px when it's read for an edit (`useLayoutPixels` in `editing/widthUnits.ts`, called from `readTable`), using the editor's content width at that moment. When it's written back, `commitTable` turns the widths into percent again (`widthsToSave`). The same width is used both ways, so a table that didn't change writes the same numbers and the diff stays empty.
+
+`responsiveWidths` only matters when widths are set from outside the model: a drag or `setColumnWidths`. Those pass the option's unit to `setTableLayout`. Every other change keeps the unit the table already has.
+
+A drag starts from the saved widths, not from measuring the screen (`startColumnWidths` in `ui/domGrid.ts`). With `border-collapse`, the measured columns add up to about a pixel less than the table, so measuring before every drag would make the table a little narrower each time. Only a table without saved widths is measured.
+
+The conversion uses the real content width. The resize limit uses that width minus 2px for the borders, and mixing the two up would make a percent table a little wider on every resize.
+
+## Fitting columns to content
+
+In the editor the columns have fixed widths, so long text just wraps and there's nothing to measure. `contentColumnWidths` in `ui/fitting.ts` puts a copy of the table in a hidden box inside `.ql-container` (outside the editor, so Quill doesn't see it), with automatic table layout and no widths. The browser then gives each column the width its content wants, and those widths are measured and saved the normal way. The copy is removed right away.
 
 ## Captions
 

@@ -3,6 +3,8 @@ export type TableAlign = 'left' | 'center' | 'right'
 export type TextAlign = 'left' | 'center' | 'right' | 'justify'
 export type BorderStyle = 'solid' | 'dashed' | 'none'
 export type CellPadding = 'compact' | 'normal' | 'wide'
+export type WidthUnit = 'px' | 'percent'
+export type CaptionSide = 'top' | 'bottom'
 
 export interface CellStyle {
   background?: string
@@ -17,6 +19,7 @@ export interface CellProperties {
 
 export interface TableProperties {
   header: boolean
+  headerColumn: boolean
   align: TableAlign
   borderColor: string | null
   borderStyle: BorderStyle
@@ -25,6 +28,7 @@ export interface TableProperties {
   stripeColor: string | null
   background: string | null
   caption: string
+  captionSide: CaptionSide
 }
 
 export const VERTICAL_ALIGNS: readonly VerticalAlign[] = ['top', 'middle', 'bottom']
@@ -93,6 +97,12 @@ export const normalizeCellPadding = (input: unknown): CellPadding | undefined =>
 
   return cellPadding === 'normal' ? undefined : cellPadding
 }
+
+export const normalizeWidthUnit = (input: unknown): 'percent' | undefined =>
+  input === 'percent' ? 'percent' : undefined
+
+export const normalizeCaptionSide = (input: unknown): 'bottom' | undefined =>
+  input === 'bottom' ? 'bottom' : undefined
 
 export const normalizeCaption = (input: unknown): string | undefined => {
   if (typeof input !== 'string') return undefined

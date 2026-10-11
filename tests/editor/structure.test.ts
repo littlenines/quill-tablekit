@@ -116,8 +116,8 @@ describe('rows and columns', () => {
 })
 
 describe('column widths', () => {
-  it('stores widths in the Delta and renders them as a colgroup', () => {
-    const { quill, tableKit } = setupWithTable(2, 2)
+  it('stores px widths in the Delta and renders them as a colgroup', () => {
+    const { quill, tableKit } = setupWithTable(2, 2, { responsiveWidths: false })
 
     quill.history.cutoff()
 

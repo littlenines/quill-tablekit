@@ -61,17 +61,19 @@ Cell properties:
 
 Table properties:
 
-| Field         | Values                                                                         | Default    |
-| ------------- | ------------------------------------------------------------------------------ | ---------- |
-| `header`      | `true` makes the first row a header row                                        | `false`    |
-| `align`       | `'left'`, `'center'`, `'right'`                                                | `'left'`   |
-| `borderStyle` | `'solid'`, `'dashed'`, `'none'`                                                | `'solid'`  |
-| `borderColor` | any CSS color, or `null` for the default                                       | `null`     |
-| `cellPadding` | space inside the cells: `'compact'`, `'normal'`, `'wide'`                      | `'normal'` |
-| `striped`     | `true` gives every other row a light gray background                           | `false`    |
-| `stripeColor` | any CSS color for the striped rows, or `null` for the default light gray       | `null`     |
-| `background`  | any CSS color, or `null`. Setting it colors every cell.                        | `null`     |
-| `caption`     | a title shown above the table, saved as `<caption>`. `''` removes it. Max 300. | `''`       |
+| Field          | Values                                                                         | Default    |
+| -------------- | ------------------------------------------------------------------------------ | ---------- |
+| `header`       | `true` makes the first row a header row                                        | `false`    |
+| `headerColumn` | `true` makes the first column a header column                                  | `false`    |
+| `align`        | `'left'`, `'center'`, `'right'`                                                | `'left'`   |
+| `borderStyle`  | `'solid'`, `'dashed'`, `'none'`                                                | `'solid'`  |
+| `borderColor`  | any CSS color, or `null` for the default                                       | `null`     |
+| `cellPadding`  | space inside the cells: `'compact'`, `'normal'`, `'wide'`                      | `'normal'` |
+| `striped`      | `true` gives every other row a light gray background                           | `false`    |
+| `stripeColor`  | any CSS color for the striped rows, or `null` for the default light gray       | `null`     |
+| `background`   | any CSS color, or `null`. Setting it colors every cell.                        | `null`     |
+| `caption`      | a title shown above the table, saved as `<caption>`. `''` removes it. Max 300. | `''`       |
+| `captionSide`  | `'top'` or `'bottom'`: where the caption goes                                  | `'top'`    |
 
 `getTableProperties()` only gives you a `background` when every cell has the same one. Otherwise it's `null`.
 
@@ -88,12 +90,12 @@ A value that isn't a valid color or alignment is treated like `null`. Each call 
 The types are exported too:
 
 ```ts
-import type { CellProperties, TableProperties, BorderStyle, CellPadding } from 'quill-tablekit'
+import type { CellProperties, TableProperties, BorderStyle, CellPadding, CaptionSide } from 'quill-tablekit'
 ```
 
 ## Column widths and row heights
 
-`setColumnWidths(table, widths)` sets the width of every column, in px. `table` is the `<table>` element. Pass `null` instead of the widths to go back to automatic widths.
+`setColumnWidths(table, widths)` sets the width of every column, in px. `table` is the `<table>` element. Pass `null` instead of the widths to go back to automatic widths. The widths you pass are always px. Unless `responsiveWidths` is `false`, they're saved as a share of the editor's current width.
 
 `setRowHeights(table, heights)` sets the height of each row, in px. Use `null` for a row that should just fit its content, or pass `null` instead of the whole list to reset every row.
 
@@ -111,6 +113,8 @@ Two shortcuts work on the table the cursor is in:
 | Method                   | What it does                                                                                                                                                |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `equalizeColumnWidths()` | Makes every column the same width. The table keeps its width.                                                                                               |
+| `fitColumnsToContent()`  | Makes each column as wide as its content, shrunk to fit the editor if needed.                                                                               |
+| `equalizeRowHeights()`   | Makes every row the same height, at least as tall as the tallest row's content.                                                                             |
 | `fitTableToWidth()`      | Makes the table as wide as the editor and keeps how wide the columns are compared to each other. Nothing to do on a new table, which is already full width. |
 
 ## Other

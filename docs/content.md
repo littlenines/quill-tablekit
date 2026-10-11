@@ -35,7 +35,7 @@ Every line inside a table has a `tablekit-cell` attribute that says which table,
 - `table`, `row` and `cell` are ids. All lines of one table share the `table` id, and so on.
 - If a few lines in a row have the same `cell` id, that's one cell with several lines.
 - `rowspan` and `colspan` are how many rows and columns the cell covers.
-- `widths` only shows up after you've resized a column. It's the width of each column in px, and every line of the table has it.
+- `widths` only shows up after you've resized a column. It's the width of each column in px, and every line of the table has it. If the table also has `widthUnit: "percent"`, the widths are percentages of the editor's width instead, with up to two decimals. Their sum is how wide the table is.
 - `rowHeight` only shows up after you've resized a row. It's the height of that row in px, and every line in that row has it.
 
 The properties from the panel are stored the same way. They only show up once you've set them, so a plain table stays short:
@@ -43,6 +43,7 @@ The properties from the panel are stored the same way. They only show up once yo
 | Field           | Belongs to | Example     | Set by                   |
 | --------------- | ---------- | ----------- | ------------------------ |
 | `header`        | table      | `true`      | Header row               |
+| `headerColumn`  | table      | `true`      | Header column            |
 | `tableAlign`    | table      | `"center"`  | Table properties         |
 | `borderColor`   | table      | `"#6fa8dc"` | Table properties         |
 | `borderStyle`   | table      | `"dashed"`  | Table properties         |
@@ -50,6 +51,7 @@ The properties from the panel are stored the same way. They only show up once yo
 | `striped`       | table      | `true`      | Table properties         |
 | `stripeColor`   | table      | `"#e8f0fe"` | Table properties         |
 | `caption`       | table      | `"Sales"`   | Table properties         |
+| `captionSide`   | table      | `"bottom"`  | Table properties         |
 | `background`    | cell       | `"#fff2cc"` | Cell or table properties |
 | `verticalAlign` | cell       | `"middle"`  | Cell properties          |
 
@@ -67,14 +69,18 @@ import type { TableCellValue } from 'quill-tablekit'
 
 `quill.getSemanticHTML()` gives you normal HTML you can use outside the editor. Tables come out as a plain `<table>` with `rowspan` and `colspan`, a `<colgroup>` if columns were resized, and simple borders. None of the editor's classes or data attributes are in there.
 
-The properties come along as inline styles: cell backgrounds, vertical alignment, row heights, the border color and style, the cell spacing and the table's alignment. Striped rows come out as a `background-color` on the cells of every other row, in the table's stripe color. If the table has a header row, its cells are `<th scope="col">` instead of `<td>`, bold and with a light gray background. A caption comes out as `<caption>`, the first thing in the table. Text alignment inside a table comes out both as Quill's `ql-align-center` class and as an inline `text-align`, so it also works where Quill's CSS isn't loaded, like in emails.
+The properties come along as inline styles: cell backgrounds, vertical alignment, row heights, the border color and style, the cell spacing and the table's alignment. Striped rows come out as a `background-color` on the cells of every other row, in the table's stripe color. If the table has a header row, it's in a `<thead>`, and its cells are `<th scope="col">` instead of `<td>`, bold and with a light gray background. The only exception is a header cell that's merged down into the next row: a cell can't be in `<thead>` and `<tbody>` at once, so then the header row stays in `<tbody>`. Header column cells are `<th scope="row">`. Percent widths come out as percentages on the `<table>` and its `<col>` elements. A caption comes out as `<caption>`, the first thing in the table, with `style="caption-side: bottom;"` if it goes under the table. Text alignment inside a table comes out both as Quill's `ql-align-center` class and as an inline `text-align`, so it also works where Quill's CSS isn't loaded, like in emails.
 
 ```html
 <table style="border-collapse: collapse; table-layout: fixed; width: 100%;">
-  <tbody>
+  <thead>
     <tr>
-      <td colspan="2" style="border: 1px solid #000;"><p>Region</p></td>
+      <th colspan="2" scope="col" style="border: 1px solid #000; text-align: left; background-color: #f3f4f6;">
+        <p>Region</p>
+      </th>
     </tr>
+  </thead>
+  <tbody>
     <tr>
       <td style="border: 1px solid #000;"><p>North</p></td>
       <td style="border: 1px solid #000;"><p>10</p></td>
@@ -83,7 +89,7 @@ The properties come along as inline styles: cell backgrounds, vertical alignment
 </table>
 ```
 
-When you paste this HTML back into an editor, the table gets all of it back: the header row, the border style, the cell spacing, the stripes and the caption.
+When you paste this HTML back into an editor, the table gets all of it back: the header row and column, percent widths, the border style, the cell spacing, the stripes and the caption.
 
 Don't use `quill.root.innerHTML` for this. That's the editor's own markup and the table styles for it only work inside the editor, so outside it you get tables with no borders.
 

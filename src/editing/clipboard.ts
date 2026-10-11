@@ -3,6 +3,7 @@ import { makeId, parseRowHeight, parseWidths, type TableCellValue } from '../mod
 import {
   normalizeBorderStyle,
   normalizeCaption,
+  normalizeCaptionSide,
   normalizeColor,
   normalizeTableAlign,
   normalizeVerticalAlign,
@@ -30,18 +31,29 @@ const idForElement = (idsByElement: WeakMap<Element, string>, element: Element, 
   return idsByElement.get(element) as string
 }
 
-const readColumnWidths = (tableElement: HTMLTableElement): number[] | undefined => {
+const isPercent = (width: string) => width.trim().endsWith('%')
+
+// Percent columns are shares of the table, so they're turned into shares of the editor like the saved widths
+const readColumnWidths = (tableElement: HTMLTableElement): Pick<TableCellValue, 'widths' | 'widthUnit'> => {
   const columnElements = [...tableElement.querySelectorAll<HTMLElement>(':scope > colgroup > col')]
-
-  if (columnElements.length === 0) return undefined
-
-  return parseWidths(
-    columnElements.map((columnElement) => {
-      const styleWidth = columnElement.style.width
-
-      return Number.parseFloat(styleWidth.endsWith('px') ? styleWidth : (columnElement.getAttribute('width') ?? ''))
-    }),
+  const columnWidths = columnElements.map(
+    (columnElement) => columnElement.style.width || columnElement.getAttribute('width') || '',
   )
+
+  if (columnWidths.length === 0) return {}
+
+  if (columnWidths.every(isPercent)) {
+    const tableWidth = tableElement.style.width
+    const tableShare = isPercent(tableWidth) ? Number.parseFloat(tableWidth) : 100
+    const widths = parseWidths(
+      columnWidths.map((width) => (Number.parseFloat(width) * tableShare) / 100),
+      2,
+    )
+
+    return widths ? { widths, widthUnit: 'percent' } : {}
+  }
+
+  return { widths: parseWidths(columnWidths.map((width) => Number.parseFloat(width))) }
 }
 
 const isBlockEmbed = ({ insert }: Operation, scroll: Scroll): boolean => {
@@ -97,6 +109,12 @@ const hasHeaderRow = (tableElement: HTMLTableElement): boolean => {
   )
 }
 
+const hasHeaderColumn = (tableElement: HTMLTableElement): boolean => {
+  const bodyRows = [...tableElement.rows].slice(hasHeaderRow(tableElement) ? 1 : 0)
+
+  return bodyRows.length > 0 && bodyRows.every((rowElement) => rowElement.cells[0]?.tagName === 'TH')
+}
+
 const readTableAlign = ({ style, align }: HTMLTableElement): TableAlign | undefined => {
   if (style.marginLeft === 'auto') return style.marginRight === 'auto' ? 'center' : 'right'
 
@@ -143,6 +161,9 @@ const stripesOf = (tableElement: HTMLTableElement): Stripes | null => {
   return stripesOfTables.get(tableElement) ?? null
 }
 
+const readCaptionSide = (captionElement: HTMLTableCaptionElement | null) =>
+  normalizeCaptionSide(captionElement?.style.captionSide || captionElement?.getAttribute('align')?.toLowerCase())
+
 const readBorderStyle = ({ style }: HTMLTableCellElement) =>
   normalizeBorderStyle(style.borderTopStyle || style.borderStyle)
 
@@ -177,7 +198,9 @@ export const matchTableCell = (cellNode: Node, cellContent: Delta, scroll: Scrol
   if (!rowElement || !tableElement) return cellContent
 
   const isHeaderTable = hasHeaderRow(tableElement)
-  const isHeaderCell = isHeaderTable && rowElement === tableElement.rows[0]
+  const isHeaderColumnTable = hasHeaderColumn(tableElement)
+  const isHeaderCell =
+    (isHeaderTable && rowElement === tableElement.rows[0]) || (isHeaderColumnTable && cellElement.cellIndex === 0)
   const stripes = stripesOf(tableElement)
   const pastedBackground = backgroundOf(cellElement)
   const isStripeColor = stripes?.rows.has(rowElement) === true && pastedBackground === stripes.color
@@ -190,9 +213,10 @@ export const matchTableCell = (cellNode: Node, cellContent: Delta, scroll: Scrol
     rowspan: Math.max(1, cellElement.rowSpan || 1),
     colspan: Math.max(1, cellElement.colSpan || 1),
     ...withoutEmptyValues({
-      widths: readColumnWidths(tableElement),
+      ...readColumnWidths(tableElement),
       rowHeight: parseRowHeight(rowElement.style.height || rowElement.getAttribute('height')),
       header: isHeaderTable || undefined,
+      headerColumn: isHeaderColumnTable || undefined,
       tableAlign: readTableAlign(tableElement),
       borderColor: normalizeColor(tableElement.style.borderColor),
       borderStyle: readBorderStyle(cellElement),
@@ -200,6 +224,7 @@ export const matchTableCell = (cellNode: Node, cellContent: Delta, scroll: Scrol
       striped: stripes ? true : undefined,
       stripeColor: stripes?.color === STRIPE_BACKGROUND ? undefined : stripes?.color,
       caption: normalizeCaption(tableElement.caption?.textContent),
+      captionSide: readCaptionSide(tableElement.caption),
       background,
       verticalAlign: normalizeVerticalAlign(cellElement.style.verticalAlign || cellElement.getAttribute('valign')),
     }),

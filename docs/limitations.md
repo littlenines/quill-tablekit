@@ -3,7 +3,8 @@
 - Only Quill 2. Quill 1 can't nest blots, which merged cells need. With Quill 1 you get a console warning and the module does nothing.
 - No tables inside tables. Inserting a table while you're in a cell does nothing, and pasting a table into a cell overwrites the cells there instead (see [Usage](./usage.md#pasting-a-table-into-a-table)).
 - Cells can only hold normal lines. Bold, links, colors, images and alignment all work. Headers, lists, code blocks and quotes don't: if you try to apply one inside a cell, nothing happens. Otherwise the line would get pulled out of the table.
-- Column widths are in px. A new table is as wide as the editor. Once you resize a column, the table keeps that pixel width, even if the editor gets narrower later.
+- With `responsiveWidths: false`, column widths are in px. Once you resize a column, the table keeps that pixel width, even if the editor gets narrower later.
+- A responsive table still can't get narrower than its columns' content and the cell padding, so on a very narrow screen it can be wider than its percentage.
 - A row can't be dragged shorter than its content. The saved height is a minimum, not an exact height.
 - Don't use it together with Quill's built-in `table` module. They both want the `table` toolbar button.
 - Other Delta-to-HTML libraries don't understand the table format. Use `quill.getSemanticHTML()` instead (see [Saved content](./content.md#html)).

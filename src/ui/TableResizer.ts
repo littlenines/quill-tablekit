@@ -4,17 +4,16 @@ import type { TableLayout } from '../editing/commands'
 import { scaleColumnWidths, sumOf } from '../model/layout'
 import type { TableAlign } from '../model/properties'
 import { tableLeftAfterResize } from './ColumnResizer'
+import { editorContentWidth, editorInnerWidth } from '../utils/editorWidth'
 import { createElement } from './dom'
 import { followMouseUntilRelease, isPastWidthLimit, showPastLimit } from './dragging'
 import {
-  editorContentWidth,
-  measureColumnWidths,
   measureRowHeights,
   naturalRowHeight,
   rowsBoxOf,
   scaleOf,
+  startColumnWidths,
   tableAlignmentOf,
-  tableGrid,
   toContainerPosition,
 } from './domGrid'
 import { savedHeightAfterDrag } from './RowResizer'
@@ -138,7 +137,7 @@ export class TableResizer {
     event.preventDefault()
 
     const tableElement = this.#hoveredTable
-    const startWidths = measureColumnWidths(tableGrid(tableElement))
+    const startWidths = startColumnWidths(tableElement, editorInnerWidth(this.#quill))
     const startHeights = measureRowHeights(tableElement)
     const minHeights = Array.from(tableElement.rows, (rowElement) => naturalRowHeight(rowElement, MIN_ROW_HEIGHT))
 

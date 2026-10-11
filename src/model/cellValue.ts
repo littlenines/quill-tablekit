@@ -1,10 +1,12 @@
 import {
   normalizeBorderStyle,
   normalizeCaption,
+  normalizeCaptionSide,
   normalizeCellPadding,
   normalizeColor,
   normalizeTableAlign,
   normalizeVerticalAlign,
+  normalizeWidthUnit,
   withoutEmptyValues,
   type BorderStyle,
   type CellPadding,
@@ -19,8 +21,10 @@ export interface TableCellValue {
   rowspan: number
   colspan: number
   widths?: number[]
+  widthUnit?: 'percent'
   rowHeight?: number
   header?: boolean
+  headerColumn?: boolean
   tableAlign?: TableAlign
   borderColor?: string
   borderStyle?: BorderStyle
@@ -28,6 +32,7 @@ export interface TableCellValue {
   striped?: boolean
   stripeColor?: string
   caption?: string
+  captionSide?: 'bottom'
   background?: string
   verticalAlign?: VerticalAlign
 }
@@ -39,8 +44,10 @@ export const CELL_DATA_ATTRIBUTES = [
   'data-rowspan',
   'data-colspan',
   'data-widths',
+  'data-width-unit',
   'data-row-height',
   'data-header',
+  'data-header-column',
   'data-table-align',
   'data-border-color',
   'data-border-style',
@@ -48,6 +55,7 @@ export const CELL_DATA_ATTRIBUTES = [
   'data-striped',
   'data-stripe-color',
   'data-caption',
+  'data-caption-side',
   'data-background',
   'data-vertical-align',
 ]
@@ -76,7 +84,7 @@ const toId = (idInput: unknown): string | null => {
 const isPositiveNumber = (width: unknown): width is number =>
   typeof width === 'number' && Number.isFinite(width) && width > 0
 
-export const parseWidths = (widthsInput: unknown): number[] | undefined => {
+export const parseWidths = (widthsInput: unknown, decimals = 0): number[] | undefined => {
   const widthEntries =
     typeof widthsInput === 'string' ? widthsInput.split(',') : Array.isArray(widthsInput) ? widthsInput : null
 
@@ -86,7 +94,9 @@ export const parseWidths = (widthsInput: unknown): number[] | undefined => {
 
   if (!widths.every(isPositiveNumber)) return undefined
 
-  return widths.map(Math.round)
+  const precision = 10 ** decimals
+
+  return widths.map((width) => Math.round(width * precision) / precision)
 }
 
 const isTrue = (flag: unknown) => flag === true || flag === 'true'
@@ -114,9 +124,11 @@ export const normalizeCellValue = (cellValueInput: unknown): TableCellValue | nu
     rowspan: toSpan(fields.rowspan),
     colspan: toSpan(fields.colspan),
     ...withoutEmptyValues({
-      widths: parseWidths(fields.widths),
+      widths: parseWidths(fields.widths, normalizeWidthUnit(fields.widthUnit) ? 2 : 0),
+      widthUnit: normalizeWidthUnit(fields.widthUnit),
       rowHeight: parseRowHeight(fields.rowHeight),
       header: isTrue(fields.header) || undefined,
+      headerColumn: isTrue(fields.headerColumn) || undefined,
       tableAlign: normalizeTableAlign(fields.tableAlign),
       borderColor: normalizeColor(fields.borderColor),
       borderStyle: normalizeBorderStyle(fields.borderStyle),
@@ -124,6 +136,7 @@ export const normalizeCellValue = (cellValueInput: unknown): TableCellValue | nu
       striped: isTrue(fields.striped) || undefined,
       stripeColor: normalizeColor(fields.stripeColor),
       caption: normalizeCaption(fields.caption),
+      captionSide: normalizeCaptionSide(fields.captionSide),
       background: normalizeColor(fields.background),
       verticalAlign: normalizeVerticalAlign(fields.verticalAlign),
     }),
@@ -136,8 +149,9 @@ export const setAttribute = (element: HTMLElement, attributeName: string, attrib
 }
 
 export const writeCellValue = (lineElement: HTMLElement, cellValue: TableCellValue): void => {
-  const { table, row, cell, rowspan, colspan, widths, rowHeight } = cellValue
-  const { header, tableAlign, borderColor, borderStyle, cellPadding, striped, stripeColor, caption } = cellValue
+  const { table, row, cell, rowspan, colspan, widths, widthUnit, rowHeight } = cellValue
+  const { header, headerColumn, tableAlign, borderColor, borderStyle, cellPadding, striped, stripeColor } = cellValue
+  const { caption, captionSide } = cellValue
   const { background, verticalAlign } = cellValue
 
   setAttribute(lineElement, 'data-table', table)
@@ -146,8 +160,10 @@ export const writeCellValue = (lineElement: HTMLElement, cellValue: TableCellVal
   setAttribute(lineElement, 'data-rowspan', String(rowspan))
   setAttribute(lineElement, 'data-colspan', String(colspan))
   setAttribute(lineElement, 'data-widths', widths?.length ? widths.join(',') : null)
+  setAttribute(lineElement, 'data-width-unit', widthUnit ?? null)
   setAttribute(lineElement, 'data-row-height', rowHeight ? String(rowHeight) : null)
   setAttribute(lineElement, 'data-header', header ? 'true' : null)
+  setAttribute(lineElement, 'data-header-column', headerColumn ? 'true' : null)
   setAttribute(lineElement, 'data-table-align', tableAlign ?? null)
   setAttribute(lineElement, 'data-border-color', borderColor ?? null)
   setAttribute(lineElement, 'data-border-style', borderStyle ?? null)
@@ -155,6 +171,7 @@ export const writeCellValue = (lineElement: HTMLElement, cellValue: TableCellVal
   setAttribute(lineElement, 'data-striped', striped ? 'true' : null)
   setAttribute(lineElement, 'data-stripe-color', stripeColor ?? null)
   setAttribute(lineElement, 'data-caption', caption ?? null)
+  setAttribute(lineElement, 'data-caption-side', captionSide ?? null)
   setAttribute(lineElement, 'data-background', background ?? null)
   setAttribute(lineElement, 'data-vertical-align', verticalAlign ?? null)
 }
@@ -169,8 +186,10 @@ export const readCellValue = (lineElement: HTMLElement) => {
     rowspan: dataset.rowspan,
     colspan: dataset.colspan,
     widths: dataset.widths,
+    widthUnit: dataset.widthUnit,
     rowHeight: dataset.rowHeight,
     header: dataset.header,
+    headerColumn: dataset.headerColumn,
     tableAlign: dataset.tableAlign,
     borderColor: dataset.borderColor,
     borderStyle: dataset.borderStyle,
@@ -178,6 +197,7 @@ export const readCellValue = (lineElement: HTMLElement) => {
     striped: dataset.striped,
     stripeColor: dataset.stripeColor,
     caption: dataset.caption,
+    captionSide: dataset.captionSide,
     background: dataset.background,
     verticalAlign: dataset.verticalAlign,
   })

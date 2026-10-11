@@ -1,5 +1,7 @@
 import { BLOT_NAMES, CLASS_NAMES } from '../config/constants'
 import { setAttribute } from '../model/cellValue'
+import { columnWidthStyles } from '../model/layout'
+import { tableGrid } from '../ui/domGrid'
 import { setStyle } from '../utils/style'
 import { Container, sharesGroupId, splitWhereGroupIdChanges, tableIdOf, type OptimizeContext } from './grouping'
 import { tableHTML } from './html'
@@ -27,6 +29,7 @@ export class TableContainer extends Container {
     if (cellValue) setAttribute(tableElement, 'data-table', cellValue.table)
 
     setAttribute(tableElement, 'data-header', cellValue?.header ? 'true' : null)
+    setAttribute(tableElement, 'data-header-column', cellValue?.headerColumn ? 'true' : null)
     setStyle(tableElement, 'margin-left', cellValue?.tableAlign ? 'auto' : undefined)
     setStyle(tableElement, 'margin-right', cellValue?.tableAlign === 'center' ? 'auto' : undefined)
     setStyle(tableElement, '--qlt-border', cellValue?.borderColor)
@@ -35,15 +38,38 @@ export class TableContainer extends Container {
     setAttribute(tableElement, 'data-striped', cellValue?.striped ? 'true' : null)
     setStyle(tableElement, '--qlt-table-stripe', cellValue?.stripeColor)
     setAttribute(tableElement, 'data-caption', cellValue?.caption ?? null)
+    setAttribute(tableElement, 'data-caption-side', cellValue?.captionSide ?? null)
 
-    this.#applyColumnWidths(cellValue?.widths ?? null)
+    this.#applyColumnWidths(cellValue?.widths ?? null, cellValue?.widthUnit === 'percent')
+    this.#markFirstColumn(cellValue?.headerColumn === true)
+  }
+
+  // A cell merged down from the row above can push a row's first <td> into the second column,
+  // so the first column comes from the grid instead of :first-child
+  #markFirstColumn(hasHeaderColumn: boolean): void {
+    const tableElement = this.domNode as HTMLTableElement
+    const markedCells = tableElement.querySelectorAll<HTMLElement>('td[data-first-column]')
+
+    if (!hasHeaderColumn) {
+      for (const cellElement of markedCells) cellElement.removeAttribute('data-first-column')
+
+      return
+    }
+
+    const firstColumnCells = new Set(tableGrid(tableElement).map(([firstCell]) => firstCell))
+
+    for (const rowElement of tableElement.rows) {
+      for (const cellElement of rowElement.cells) {
+        setAttribute(cellElement, 'data-first-column', firstColumnCells.has(cellElement) ? '' : null)
+      }
+    }
   }
 
   html(startIndex: number, length: number): string {
     return tableHTML(this, startIndex, length)
   }
 
-  #applyColumnWidths(columnWidths: number[] | null): void {
+  #applyColumnWidths(columnWidths: number[] | null, isPercent: boolean): void {
     const tableElement = this.domNode as HTMLTableElement
 
     if (!columnWidths?.length) {
@@ -68,14 +94,12 @@ export class TableContainer extends Container {
 
     while (colgroup.children.length < columnWidths.length) colgroup.append(document.createElement('col'))
 
-    for (const [columnIndex, width] of columnWidths.entries()) {
-      const columnElement = colgroup.children[columnIndex] as HTMLElement
+    const widthStyles = columnWidthStyles(columnWidths, isPercent)
 
-      if (columnElement.style.width !== `${width}px`) columnElement.style.width = `${width}px`
+    for (const [columnIndex, width] of widthStyles.columns.entries()) {
+      setStyle(colgroup.children[columnIndex] as HTMLElement, 'width', width)
     }
 
-    const totalWidth = `${columnWidths.reduce((total, width) => total + width, 0)}px`
-
-    if (tableElement.style.width !== totalWidth) tableElement.style.width = totalWidth
+    setStyle(tableElement, 'width', widthStyles.table)
   }
 }

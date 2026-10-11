@@ -31,7 +31,7 @@ describe('Delta round trip', () => {
 
 describe('semantic HTML', () => {
   it('exports spans and widths without editor-only markup', () => {
-    const { quill, tableKit } = setupWithTable(2, 2)
+    const { quill, tableKit } = setupWithTable(2, 2, { responsiveWidths: false })
 
     quill.insertText(0, 'x<y', 'user')
     quill.setSelection(0, cellIndex(quill, 1))

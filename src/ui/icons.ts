@@ -10,6 +10,9 @@ export const ICONS = {
   headerRow: icon(
     '<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M2 6.5h12"/><path d="M3 4.4h10" stroke-width="2.6"/>',
   ),
+  headerColumn: icon(
+    '<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M6 2.5v11"/><path d="M4 3.5v9" stroke-width="2.6"/>',
+  ),
   cellProperties: icon('<path d="M8 2.5 4.6 7.2a4 4 0 1 0 6.8 0Z"/><path d="M6.4 10.2a1.8 1.8 0 0 0 1.6 1.3"/>'),
   tableProperties: icon(
     '<path d="M2.5 4h11M2.5 8h11M2.5 12h11"/><circle cx="6" cy="4" r="1.4" fill="currentColor"/><circle cx="10.5" cy="8" r="1.4" fill="currentColor"/><circle cx="5" cy="12" r="1.4" fill="currentColor"/>',
