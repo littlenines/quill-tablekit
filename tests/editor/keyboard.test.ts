@@ -57,6 +57,37 @@ describe('keyboard in a table', () => {
     expect(quill.getSelection()?.index).toBe(0)
   })
 
+  it('tabs through merged cells row by row, where each cell starts', () => {
+    const { quill, tableKit } = setupWithTable(2, 3)
+
+    for (const [cellNumber, text] of [...['a', 'b', 'c', 'd', 'e', 'f'].entries()].reverse()) {
+      quill.insertText(cellIndex(quill, cellNumber), text, 'user')
+    }
+
+    quill.setSelection(cellIndex(quill, 1), cellIndex(quill, 4) - cellIndex(quill, 1) + 1)
+    tableKit.mergeCells()
+
+    const textAtCursor = () => {
+      const selection = quill.getSelection()
+
+      return quill.getText(selection?.index, selection?.length).replaceAll('\n', '/')
+    }
+
+    quill.setSelection(cellIndex(quill, 2), 0)
+    press(quill, 'Tab')
+    expect(textAtCursor()).toBe('d')
+
+    press(quill, 'Tab')
+    expect(textAtCursor()).toBe('f')
+
+    press(quill, 'Tab', { shiftKey: true })
+    press(quill, 'Tab', { shiftKey: true })
+    expect(textAtCursor()).toBe('c')
+
+    press(quill, 'Tab', { shiftKey: true })
+    expect(textAtCursor()).toBe('b/e')
+  })
+
   it('adds a row when tabbing out of the last cell', () => {
     const { quill } = setupWithTable(1, 2)
 

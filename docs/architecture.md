@@ -168,6 +168,8 @@ The browser's own Up and Down in a table follow the screen, not the grid, so wit
 
 When it steps in, it finds the cell in the next row under the cursor's x position, then asks the browser for the text position at that x on the cell's first or last line (`caretPositionFromPoint`, or `caretRangeFromPoint` in older Chrome and Safari). If that fails, the cursor goes to the start or end of the cell.
 
+Tab, Shift+Tab, Up and Down don't build a `TableModel`, because they only move the cursor. Tab follows the `<td>` elements in page order: a merged cell is a `<td>` in the row where it starts, so that's the same order as the model's. Up and Down read the grid from the page with `tableGrid`, which uses the same placing function as the model. Reading the whole table on every key press took about 30 ms on a 100 × 30 table. Tab in the last cell still goes through the model, because adding a row changes the table.
+
 ## Pasted stripes
 
 A pasted table doesn't say it's striped, it just has colored cells. `findStripes` in `editing/clipboard.ts` looks for the pattern instead: under the header row, every other row has mostly one background, and the rows between don't have it at all. Then the table gets `striped` and that `stripeColor`, and those cells don't keep the color as their own background. One colored row isn't enough to tell stripes from a colored total row, so that needs two, unless it's the default stripe color.

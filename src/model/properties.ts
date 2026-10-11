@@ -51,8 +51,23 @@ const rgbToHex = (rgbColor: string): string => {
   return `#${channels.join('')}`
 }
 
-const isColorTheBrowserKnows = (color: string): boolean =>
-  typeof CSS === 'undefined' || typeof CSS.supports !== 'function' || CSS.supports('color', color)
+// Every line of a table carries its colors, so the same few are checked over and over
+const MAX_REMEMBERED_COLORS = 500
+const browserColorAnswers = new Map<string, boolean>()
+
+const isColorTheBrowserKnows = (color: string): boolean => {
+  if (typeof CSS === 'undefined' || typeof CSS.supports !== 'function') return true
+
+  const rememberedAnswer = browserColorAnswers.get(color)
+
+  if (rememberedAnswer !== undefined) return rememberedAnswer
+  if (browserColorAnswers.size >= MAX_REMEMBERED_COLORS) browserColorAnswers.clear()
+
+  const isKnown = CSS.supports('color', color)
+
+  browserColorAnswers.set(color, isKnown)
+  return isKnown
+}
 
 export const normalizeColor = (colorInput: unknown): string | undefined => {
   if (typeof colorInput !== 'string') return undefined

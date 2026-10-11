@@ -29,6 +29,20 @@ describe('normalizeColor', () => {
     vi.unstubAllGlobals()
   })
 
+  it('asks the browser only once per color', () => {
+    const supports = vi.fn(() => true)
+
+    vi.stubGlobal('CSS', { supports })
+
+    normalizeColor('lavenderblush')
+    normalizeColor('lavenderblush')
+    normalizeColor(' lavenderblush ')
+
+    expect(supports).toHaveBeenCalledTimes(1)
+
+    vi.unstubAllGlobals()
+  })
+
   it('rejects things that are not a color', () => {
     expect(normalizeColor('transparent')).toBeUndefined()
     expect(normalizeColor('red; background: url(x)')).toBeUndefined()

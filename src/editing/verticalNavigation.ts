@@ -1,8 +1,9 @@
 import Quill from 'quill'
 import type { Range } from 'quill'
-import type { CellData } from '../model/cell'
+import { cellAreas } from '../model/grid'
+import { tableGrid } from '../ui/domGrid'
 import { Parchment } from '../utils/quill'
-import { getTableContext } from './context'
+import { lineAt, tableOf } from './selection'
 
 interface CaretPoint {
   node: Node
@@ -56,8 +57,15 @@ const indexAtPoint = (quill: Quill, cellElement: HTMLElement, clientX: number, c
   return quill.getIndex(blot) + (isTextPoint ? caretPoint.offset : 0)
 }
 
-const cellElementOf = (tableElement: HTMLElement, cell: CellData) =>
-  [...tableElement.querySelectorAll<HTMLElement>('td')].find((cellElement) => cellElement.dataset.cell === cell.id)
+const cellRange = (quill: Quill, cellElement: HTMLElement): { start: number; end: number } | null => {
+  const cellBlot = Quill.find(cellElement)
+
+  if (!(cellBlot instanceof Parchment.ParentBlot)) return null
+
+  const start = quill.getIndex(cellBlot)
+
+  return { start, end: start + cellBlot.length() - 1 }
+}
 
 const lineEdge = (quill: Quill, index: number, direction: -1 | 1): number => {
   const [line, offsetInLine] = quill.getLine(index)
@@ -74,42 +82,51 @@ const leaveTable = (quill: Quill, index: number, tableStart: number, tableEnd: n
   return true
 }
 
+// Reads the grid from the <td> elements on the page, so moving one row doesn't need to read the whole table
 export const moveVertically = (quill: Quill, range: Range | null, direction: -1 | 1): boolean => {
-  const tableContext = range?.length === 0 ? getTableContext(quill, range) : null
+  const line = range?.length === 0 ? lineAt(quill, range.index) : null
+  const tableBlot = line && tableOf(line)
+  const cellElement = (line?.domNode as HTMLElement | undefined)?.closest('td')
 
-  if (!range || !tableContext) return false
+  if (!range || !tableBlot || !cellElement) return false
 
-  const { model, startCell, tableStart, tableBlot } = tableContext
-  const cellStart = tableStart + model.cellOffset(startCell.id)
-  const cellEnd = cellStart + startCell.content.length() - 1
-  const cellArea = model.areaOf(startCell)
+  const tableElement = tableBlot.domNode as HTMLTableElement
+  const grid = tableGrid(tableElement)
+  const cellArea = cellAreas(grid).get(cellElement)
+  const currentCell = cellRange(quill, cellElement)
 
-  if (!cellArea || !isOnSameVisualLine(quill, range.index, direction < 0 ? cellStart : cellEnd)) return false
+  if (!cellArea || !currentCell) return false
+  if (!isOnSameVisualLine(quill, range.index, direction < 0 ? currentCell.start : currentCell.end)) return false
 
   const targetRow = direction < 0 ? cellArea.top - 1 : cellArea.bottom
-  const rowCells = model.grid[targetRow]?.slice(cellArea.left, cellArea.right)
+  const rowCells = [...new Set(grid[targetRow]?.slice(cellArea.left, cellArea.right))].filter(
+    (rowCell): rowCell is HTMLTableCellElement => rowCell != null,
+  )
 
-  if (!rowCells?.length) return leaveTable(quill, range.index, tableStart, tableStart + tableBlot.length(), direction)
+  if (rowCells.length === 0) {
+    const tableStart = quill.getIndex(tableBlot)
 
-  const tableElement = tableBlot.domNode as HTMLElement
+    return leaveTable(quill, range.index, tableStart, tableStart + tableBlot.length(), direction)
+  }
+
   const clientX = caretClientX(quill, range.index)
-  const cellUnderCaret = rowCells.find((cell) => {
-    const cellBox = cellElementOf(tableElement, cell)?.getBoundingClientRect()
+  const cellUnderCaret = rowCells.find((rowCell) => {
+    const cellBox = rowCell.getBoundingClientRect()
 
-    return clientX != null && cellBox != null && clientX >= cellBox.left && clientX < cellBox.right
+    return clientX != null && clientX >= cellBox.left && clientX < cellBox.right
   })
-  const targetCell = cellUnderCaret ?? rowCells[0]
-  const targetStart = tableStart + model.cellOffset(targetCell.id)
-  const targetEnd = targetStart + targetCell.content.length() - 1
-  const targetElement = cellElementOf(tableElement, targetCell)
-  const lineElements = targetElement ? [...targetElement.children] : []
+  const targetElement = cellUnderCaret ?? rowCells[0]
+  const targetCell = cellRange(quill, targetElement)
+
+  if (!targetCell) return false
+
+  const { start: targetStart, end: targetEnd } = targetCell
+  const lineElements = [...targetElement.children]
   const lineElement = direction < 0 ? lineElements.at(-1) : lineElements[0]
   const lineBoxes = lineElement ? [...lineElement.getClientRects()] : []
   const lineBox = direction < 0 ? lineBoxes.at(-1) : lineBoxes[0]
   const pointIndex =
-    targetElement && lineBox && clientX != null
-      ? indexAtPoint(quill, targetElement, clientX, lineBox.top + lineBox.height / 2)
-      : null
+    lineBox && clientX != null ? indexAtPoint(quill, targetElement, clientX, lineBox.top + lineBox.height / 2) : null
   const isInsideTarget = pointIndex != null && pointIndex >= targetStart && pointIndex <= targetEnd
 
   quill.setSelection(isInsideTarget ? pointIndex : direction < 0 ? targetEnd : targetStart, 0, 'user')
