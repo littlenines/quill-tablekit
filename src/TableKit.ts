@@ -3,13 +3,15 @@ import type { Range } from 'quill'
 import { registerBlots, type TableContainer } from './blots'
 import { CELL_FORMAT } from './config/constants'
 import { resolveOptions, type ResolvedTableKitOptions, type TableKitOptions } from './config/options'
-import { clipboardContentOf, wholeTableArea, writeToClipboard } from './editing/cellClipboard'
-import { matchCaption, matchTableCell, matchTableRow } from './editing/clipboard'
+import { clipboardContentOf, wholeTableArea, writeToClipboard } from './editing/clipboard/cellClipboard'
+import { matchCaption, matchTableCell, matchTableRow } from './editing/clipboard/pasteMatchers'
 import * as commands from './editing/commands'
+import { moveToCell } from './editing/input/cellNavigation'
+import { selectCells } from './editing/selectedCells'
 import { canMerge, canSplit, getTableContext, type TableContext } from './editing/context'
 import * as edits from './editing/edits'
-import { installInputGuards } from './editing/inputGuards'
-import { installKeyboard } from './editing/keyboard'
+import { installInputGuards } from './editing/input/inputGuards'
+import { installKeyboard } from './editing/input/keyboard'
 import {
   changeCellProperties,
   changeTableProperties,
@@ -20,15 +22,15 @@ import { isInTable } from './editing/selection'
 import { percentBasis } from './editing/widthUnits'
 import type { CellProperties, TableProperties, WidthUnit } from './model/properties'
 import { fitColumnWidthsWithin } from './model/layout'
-import { equalizeColumnWidths, fitToWidth } from './model/widths'
+import { equalizeColumnWidths, fitToWidth } from './model/operations/widths'
 import { injectStyles } from './styles/injectStyles'
 import { CellSelection } from './ui/CellSelection'
-import { ColumnResizer } from './ui/ColumnResizer'
-import { contentColumnWidths, equalRowHeight } from './ui/fitting'
+import { ColumnResizer } from './ui/resize/ColumnResizer'
+import { contentColumnWidths, equalRowHeight } from './ui/resize/fitting'
 import { editorContentWidth } from './utils/editorWidth'
-import { RowResizer } from './ui/RowResizer'
+import { RowResizer } from './ui/resize/RowResizer'
 import { TableControls } from './ui/TableControls'
-import { TableResizer } from './ui/TableResizer'
+import { TableResizer } from './ui/resize/TableResizer'
 import { Module } from './utils/quill'
 import { isSupportedQuill, warnUnsupported } from './utils/support'
 
@@ -197,11 +199,11 @@ class TableKit extends Module<TableKitOptions> {
   }
 
   selectRow(): void {
-    commands.selectCells(this.quill, this.#currentRange(), 'rows')
+    selectCells(this.quill, this.#currentRange(), 'rows')
   }
 
   selectColumn(): void {
-    commands.selectCells(this.quill, this.#currentRange(), 'columns')
+    selectCells(this.quill, this.#currentRange(), 'columns')
   }
 
   async copyTable(): Promise<boolean> {
@@ -277,7 +279,7 @@ class TableKit extends Module<TableKitOptions> {
   }
 
   moveToCell(direction: 1 | -1): boolean {
-    return commands.moveToCell(this.quill, this.#currentRange(), direction)
+    return moveToCell(this.quill, this.#currentRange(), direction)
   }
 
   getContext(range: Range | null = this.#currentRange()): TableContext | null {

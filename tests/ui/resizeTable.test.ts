@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { rowHeightAfterDrag, savedHeightAfterDrag } from '../../src/ui/RowResizer'
-import { isPastWidthLimit } from '../../src/ui/dragging'
 import { scaleColumnWidths } from '../../src/model/layout'
-import { growRowHeights } from '../../src/ui/TableResizer'
+import { isPastWidthLimit } from '../../src/ui/resize/dragging'
+import { growRowHeights, rowHeightAfterDrag, savedHeightAfterDrag } from '../../src/ui/resize/resizeMath'
 
 describe('rowHeightAfterDrag', () => {
   it('adds the drag distance to the row', () => {

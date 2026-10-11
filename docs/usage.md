@@ -32,11 +32,13 @@ Settings are in [Options](./options.md), and there's a React example in [React](
 
 ## Inserting a table
 
-Click the table button when the cursor is not in a table. You'll see a grid: move the mouse over it and click when it shows the size you want. The grid is 8 × 10 by default.
+Click the table button in the toolbar. You'll see a grid: move the mouse over it and click when it shows the size you want. The grid is 8 × 10 by default.
 
 For bigger tables, type the rows and columns in the two boxes under the grid and press Insert. The limit is 100 × 30 unless you change `maxRows` and `maxColumns`.
 
 The table goes under the line you're on. If that line is empty, the table takes its place. There's always a line after the table, so you can keep typing below it.
+
+If the cursor is in a table, the new table goes below that table, with an empty line between them. Tables can't go inside other tables.
 
 ## The action bar
 
@@ -68,7 +70,7 @@ You can also bring your own icons for the buttons, see [Icons](./options.md#icon
 
 ## The table menu
 
-Click the table button in the toolbar while the cursor is in a table. You get every action in one list:
+With the action bar turned off (`actionBar: false`), the table button in the toolbar opens this menu while the cursor is in a table, since there's no other place for the table's actions. With the action bar on, the table button always inserts a new table. You get every action in one list:
 
 - Insert row above / below
 - Insert column left / right

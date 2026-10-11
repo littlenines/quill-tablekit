@@ -33,10 +33,20 @@ describe('inserting a table', () => {
     expect(quill.root.lastElementChild?.tagName).toBe('P')
   })
 
-  it('does not nest a table inside a cell', () => {
+  it('puts a table inserted from a cell below the current table, with a line between them', () => {
     const { quill, tableKit } = setupWithTable(2, 2)
 
-    tableKit.insertTable(2, 2)
+    quill.history.cutoff()
+    tableKit.insertTable(1, 3)
+
+    const [firstTable, newTable] = tables(quill)
+
+    expect(tables(quill)).toHaveLength(2)
+    expect(firstTable.querySelector('table')).toBeNull()
+    expect(newTable.rows[0].cells).toHaveLength(3)
+    expect(firstTable.nextElementSibling?.tagName).toBe('P')
+
+    quill.history.undo()
 
     expect(tables(quill)).toHaveLength(1)
   })

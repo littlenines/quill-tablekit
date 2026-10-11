@@ -1,7 +1,7 @@
-import * as arrange from '../model/arrange'
+import * as arrange from '../model/operations/arrange'
 import type { CellData } from '../model/cell'
-import * as merging from '../model/merging'
-import * as rowsAndColumns from '../model/rowsAndColumns'
+import * as merging from '../model/operations/merging'
+import * as rowsAndColumns from '../model/operations/rowsAndColumns'
 import type { TableContext } from './context'
 
 export type TableEdit = (tableContext: TableContext) => CellData | null | undefined

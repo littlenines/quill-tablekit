@@ -12,10 +12,10 @@ The methods work on the table where the cursor is. If the editor doesn't have fo
 
 ## Tables
 
-| Method                               | What it does                                                                                                                                                         |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `insertTable(rowCount, columnCount)` | Adds an empty table under the current line, or in its place if the line is empty. Can't go over `maxRows` × `maxColumns`. Does nothing if you're already in a table. |
-| `deleteTable()`                      | Removes the table.                                                                                                                                                   |
+| Method                               | What it does                                                                                                                                                                   |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `insertTable(rowCount, columnCount)` | Adds an empty table under the current line, or in its place if the line is empty. Can't go over `maxRows` × `maxColumns`. From a cell, the table goes below the current table. |
+| `deleteTable()`                      | Removes the table.                                                                                                                                                             |
 
 ## Rows and columns
 

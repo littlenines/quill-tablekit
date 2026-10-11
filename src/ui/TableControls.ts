@@ -2,12 +2,13 @@ import type Quill from 'quill'
 import type { Range } from 'quill'
 import type { ResolvedTableKitOptions, TableMenuItemName } from '../config/options'
 import type TableKit from '../TableKit'
-import { ActionBar } from './ActionBar'
-import { installContextMenu } from './contextMenu'
-import { PropertiesPanel } from './PropertiesPanel'
-import { cellPropertyFields, tablePropertyFields } from './propertyFields'
-import { TableMenu } from './TableMenu'
-import { tableMenuItems, type TableMenuActions } from './tableMenuItems'
+import { ActionBar } from './actionBar/ActionBar'
+import { installContextMenu } from './menu/contextMenu'
+import { menuActions } from './menu/menuActions'
+import { PropertiesPanel } from './panel/PropertiesPanel'
+import { cellPropertyFields, tablePropertyFields } from './panel/propertyFields'
+import { TableMenu } from './menu/TableMenu'
+import { tableMenuItems, type TableMenuActions } from './menu/tableMenuItems'
 import { TablePicker } from './TablePicker'
 import { setupToolbarButton } from './toolbarButton'
 
@@ -147,7 +148,10 @@ export class TableControls {
       return
     }
 
-    if (this.#tableKit.isInTable()) {
+    // The action bar already has the table's actions, so then the button always inserts a table
+    const showsMenu = this.#tableKit.isInTable() && !this.#actionBar && this.#settings.menu.length > 0
+
+    if (showsMenu) {
       const { left, bottom } = toolbarButton.getBoundingClientRect()
 
       this.openMenu({ clientX: left, clientY: bottom + 4, anchor: toolbarButton })
@@ -157,38 +161,10 @@ export class TableControls {
   }
 
   #menuActions(): TableMenuActions {
-    const tableKit = this.#tableKit
-
-    return {
-      insertRowAbove: () => tableKit.insertRowAbove(),
-      insertRowBelow: () => tableKit.insertRowBelow(),
-      insertColumnLeft: () => tableKit.insertColumnLeft(),
-      insertColumnRight: () => tableKit.insertColumnRight(),
-      moveRowUp: () => tableKit.moveRowUp(),
-      moveRowDown: () => tableKit.moveRowDown(),
-      moveColumnLeft: () => tableKit.moveColumnLeft(),
-      moveColumnRight: () => tableKit.moveColumnRight(),
-      duplicateRow: () => tableKit.duplicateRow(),
-      duplicateColumn: () => tableKit.duplicateColumn(),
-      equalColumnWidths: () => tableKit.equalizeColumnWidths(),
-      fitToContent: () => tableKit.fitColumnsToContent(),
-      fitToWidth: () => tableKit.fitTableToWidth(),
-      equalRowHeights: () => tableKit.equalizeRowHeights(),
-      insertParagraphAbove: () => tableKit.insertParagraphAbove(),
-      insertParagraphBelow: () => tableKit.insertParagraphBelow(),
-      selectRow: () => tableKit.selectRow(),
-      selectColumn: () => tableKit.selectColumn(),
-      copyTable: () => void tableKit.copyTable(),
-      mergeCells: () => tableKit.mergeCells(),
-      splitCell: () => tableKit.splitCell(),
-      headerRow: () => tableKit.setTableProperties({ header: !tableKit.getTableProperties()?.header }),
-      headerColumn: () => tableKit.setTableProperties({ headerColumn: !tableKit.getTableProperties()?.headerColumn }),
-      cellProperties: () => this.#openCellProperties(),
-      tableProperties: () => this.#openTableProperties(),
-      deleteRow: () => tableKit.deleteRow(),
-      deleteColumn: () => tableKit.deleteColumn(),
-      deleteTable: () => tableKit.deleteTable(),
-    }
+    return menuActions(this.#tableKit, {
+      openCellProperties: () => this.#openCellProperties(),
+      openTableProperties: () => this.#openTableProperties(),
+    })
   }
 
   #openCellProperties(): void {

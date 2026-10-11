@@ -4,7 +4,7 @@ import { columnWidthStyles } from '../model/layout'
 import { tableGrid } from '../ui/domGrid'
 import { setStyle } from '../utils/style'
 import { Container, sharesGroupId, splitWhereGroupIdChanges, tableIdOf, type OptimizeContext } from './grouping'
-import { tableHTML } from './html'
+import { tableHTML } from '../html/tableHTML'
 import { firstLine } from './TableCellLine'
 
 export class TableContainer extends Container {

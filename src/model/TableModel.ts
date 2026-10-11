@@ -2,17 +2,11 @@ import { CELL_FORMAT } from '../config/constants'
 import { indexes } from '../utils/array'
 import { Delta } from '../utils/quill'
 import { emptyCell, type CellData } from './cell'
-import { makeId, normalizeCellValue, type TableCellValue } from './cellValue'
-import { cellAreas, cellsInArea, expandToWholeCells, placeCells, type CellArea, type SpannedCell } from './grid'
+import { makeId, type TableCellValue } from './cellValue'
+import { cellAreas, cellsInArea, expandToWholeCells, placeCells, type CellArea } from './grid'
 import { sumOf } from './layout'
-import {
-  withoutEmptyValues,
-  type BorderStyle,
-  type CellPadding,
-  type CellStyle,
-  type TableAlign,
-  type WidthUnit,
-} from './properties'
+import { withoutEmptyValues, type BorderStyle, type CellPadding, type TableAlign, type WidthUnit } from './properties'
+import { groupLinesByCell, rowsOfCells } from './tableLines'
 
 export interface PlacedCell {
   cell: CellData
@@ -20,16 +14,6 @@ export interface PlacedCell {
   column: number
   rowspan: number
   colspan: number
-}
-
-const cellStyleOf = ({ background, verticalAlign }: TableCellValue): CellStyle =>
-  withoutEmptyValues({ background, verticalAlign })
-
-const uniqueId = (usedIds: Set<string>, preferredId: string, prefix: string): string => {
-  const chosenId = usedIds.has(preferredId) ? makeId(prefix) : preferredId
-
-  usedIds.add(chosenId)
-  return chosenId
 }
 
 // A table as a grid: a merged cell is the same CellData in every spot it covers.
@@ -72,46 +56,8 @@ export class TableModel {
   }
 
   static fromDelta(tableDelta: Delta): TableModel {
-    const cellGroups: { cellValue: TableCellValue; content: Delta }[] = []
-
-    tableDelta.eachLine((lineContent, lineAttributes) => {
-      const cellValue = normalizeCellValue(lineAttributes[CELL_FORMAT])
-
-      if (!cellValue) return
-
-      const { [CELL_FORMAT]: _cellFormat, ...otherAttributes } = lineAttributes
-      const hasOtherAttributes = Object.keys(otherAttributes).length > 0
-      const line = new Delta(lineContent.ops).insert('\n', hasOtherAttributes ? otherAttributes : undefined)
-      const previousGroup = cellGroups.at(-1)
-      const isSameCell =
-        previousGroup?.cellValue.row === cellValue.row && previousGroup.cellValue.cell === cellValue.cell
-
-      if (previousGroup && isSameCell) previousGroup.content = previousGroup.content.concat(line)
-      else cellGroups.push({ cellValue, content: line })
-    })
-
-    const usedCellIds = new Set<string>()
-    const usedRowIds = new Set<string>()
-    const rowIds: string[] = []
-    const rowHeights: (number | undefined)[] = []
-    const rows: SpannedCell<CellData>[][] = []
-
-    for (const [groupIndex, { cellValue, content }] of cellGroups.entries()) {
-      if (cellGroups[groupIndex - 1]?.cellValue.row !== cellValue.row) {
-        rowIds.push(uniqueId(usedRowIds, cellValue.row, 'row'))
-        rowHeights.push(cellValue.rowHeight)
-        rows.push([])
-      }
-
-      rows
-        .at(-1)
-        ?.push({
-          cell: { id: uniqueId(usedCellIds, cellValue.cell, 'cell'), content, style: cellStyleOf(cellValue) },
-          rowspan: cellValue.rowspan,
-          colspan: cellValue.colspan,
-        })
-    }
-
+    const cellGroups = groupLinesByCell(tableDelta)
+    const { rowIds, rowHeights, rows } = rowsOfCells(cellGroups)
     const firstCellValue = cellGroups[0]?.cellValue
     const tableId = firstCellValue?.table ?? makeId('tbl')
     const model = new TableModel(
@@ -188,33 +134,6 @@ export class TableModel {
     this.columnWidths = [...fittedWidths, ...indexes(missingColumns).map(() => averageWidth)]
   }
 
-  // Removes rows and columns where no cell starts, since those can't be written as lines
-  normalize(): void {
-    for (let rowIndex = this.rowCount - 1; rowIndex > 0; rowIndex--) {
-      const rowAbove = this.grid[rowIndex - 1]
-      const isCoveredFromAbove = this.grid[rowIndex].every((cell, columnIndex) => cell === rowAbove[columnIndex])
-
-      if (isCoveredFromAbove) {
-        this.grid.splice(rowIndex, 1)
-        this.rowIds.splice(rowIndex, 1)
-        this.#foldRowHeightIntoRowAbove(rowIndex)
-      }
-    }
-
-    for (let columnIndex = this.columnCount - 1; columnIndex > 0; columnIndex--) {
-      const isCoveredFromLeft = this.grid.every((row) => row[columnIndex] === row[columnIndex - 1])
-
-      if (!isCoveredFromLeft) continue
-
-      for (const row of this.grid) row.splice(columnIndex, 1)
-
-      if (this.columnWidths) {
-        this.columnWidths[columnIndex - 1] += this.columnWidths[columnIndex]
-        this.columnWidths.splice(columnIndex, 1)
-      }
-    }
-  }
-
   orderedCells(): PlacedCell[] {
     return [...cellAreas(this.grid)].map(([cell, { top, left, bottom, right }]) => ({
       cell,
@@ -273,12 +192,5 @@ export class TableModel {
     }
 
     return -1
-  }
-
-  #foldRowHeightIntoRowAbove(rowIndex: number): void {
-    const [removedHeight] = this.rowHeights.splice(rowIndex, 1)
-    const heightAbove = this.rowHeights[rowIndex - 1]
-
-    this.rowHeights[rowIndex - 1] = heightAbove && removedHeight ? heightAbove + removedHeight : undefined
   }
 }

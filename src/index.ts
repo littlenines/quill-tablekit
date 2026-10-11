@@ -1,6 +1,7 @@
 import TableKit from './TableKit'
 
-export type { TableKitOptions, TableKitLabels, TableKitIcons, TableMenuItemName } from './config/options'
+export type { TableKitLabels } from './config/labels'
+export type { TableKitOptions, TableKitIcons, TableMenuItemName } from './config/options'
 export type { TableCellValue } from './model/cellValue'
 export type {
   BorderStyle,

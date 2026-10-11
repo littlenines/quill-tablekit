@@ -19,76 +19,109 @@ The demo uses the files in `src` directly, so you can run `pnpm dev` in `demo/` 
 
 ```
 src/
-├── index.ts              what the package exports
-├── TableKit.ts           the Quill module: the public methods, and it sets everything else up
+├── index.ts                what the package exports
+├── TableKit.ts             the Quill module: the public methods, and it sets everything else up
 ├── blots/
-│   ├── TableCellLine.ts  a line of text in a cell (the only blot with data)
-│   ├── TableCell.ts      <td>, with its background and vertical alignment
-│   ├── TableRow.ts       <tr>
-│   ├── TableBody.ts      <tbody>
-│   ├── TableContainer.ts <table>: column widths, header row, alignment, borders, stripes, caption
-│   ├── grouping.ts       how the containers group lines together
-│   ├── html.ts           getSemanticHTML output for tables
-│   └── index.ts          connects the blots and registers them
+│   ├── TableCellLine.ts    a line of text in a cell (the only blot with data)
+│   ├── TableCell.ts        <td>, with its background and vertical alignment
+│   ├── TableRow.ts         <tr>
+│   ├── TableBody.ts        <tbody>
+│   ├── TableContainer.ts   <table>: column widths, header row and column, alignment, borders, stripes, caption
+│   ├── grouping.ts         how the containers group lines together
+│   └── index.ts            connects the blots and registers them
 ├── config/
-│   ├── constants.ts      format, blot and class names
-│   └── options.ts        options, labels, defaults
+│   ├── constants.ts        format, blot and class names, default colors
+│   ├── labels.ts           every text in the UI, in English
+│   └── options.ts          options, menu items, defaults
 ├── editing/
-│   ├── context.ts        reading the table at the cursor into a TableContext
-│   ├── edits.ts          the table changes (insert row, merge...) as small functions
-│   ├── commands.ts       applying a change to the editor, inserting tables, Tab moves, selecting rows
-│   ├── properties.ts     reading and changing cell and table properties
-│   ├── selection.ts      finding the table at the cursor, deleting without breaking tables
-│   ├── keyboard.ts       Tab, Up, Down, Backspace, Delete, Enter
-│   ├── verticalNavigation.ts Up and Down between cells
-│   ├── widthUnits.ts     turning percent widths into px while a table is edited, and back
-│   ├── tabSeparated.ts   reading pasted text with tabs as rows and cells
-│   ├── inputGuards.ts    copy, cut, paste, and typing over several cells
-│   ├── cellClipboard.ts  the clipboard content for a block of cells, and Copy table
-│   └── clipboard.ts      turning pasted <td> into table lines
+│   ├── context.ts          reading the table at the cursor into a TableContext
+│   ├── edits.ts            the table changes (insert row, merge...) run on the selection
+│   ├── commands.ts         applying a change to the editor, inserting tables and paragraphs, layout
+│   ├── selectedCells.ts    selecting rows and columns, and emptying the selected cells
+│   ├── properties.ts       reading and changing cell and table properties
+│   ├── selection.ts        finding the table at the cursor, deleting without breaking tables
+│   ├── widthUnits.ts       turning percent widths into px while a table is edited, and back
+│   ├── clipboard/
+│   │   ├── pasteMatchers.ts    turning pasted <td>, <tr> and <caption> into table lines
+│   │   ├── pastedTableStyle.ts reading a pasted table's look: header, stripes, widths, borders, caption
+│   │   ├── pasteIntoCells.ts   pasting a table over the cells at the cursor
+│   │   ├── cellClipboard.ts    the clipboard content for a block of cells, and Copy table
+│   │   └── tabSeparated.ts     reading pasted text with tabs as rows and cells
+│   └── input/
+│       ├── keyboard.ts         Tab, Up, Down, Backspace, Delete, Enter
+│       ├── cellNavigation.ts   Tab and Shift+Tab between cells
+│       ├── verticalNavigation.ts Up and Down between cells
+│       └── inputGuards.ts      copy, cut, paste, and typing over several cells
+├── html/
+│   ├── tableHTML.ts        getSemanticHTML output for tables and copied cells
+│   ├── cellTags.ts         the <td> and <th> tags with their inline styles
+│   └── markup.ts           escaping, and copying an element without the editor's markup
 ├── model/
-│   ├── TableModel.ts     a table as a grid of cells: reading and writing its lines, finding cells
-│   ├── cell.ts           a single cell, and empty or copied cells
-│   ├── rowsAndColumns.ts inserting and deleting rows and columns
-│   ├── arrange.ts        moving and duplicating rows and columns
-│   ├── merging.ts        merging and splitting cells
-│   ├── cellChanges.ts    cell style, text alignment, clearing text
-│   ├── paste.ts          pasting one table over the cells of another
-│   ├── widths.ts         equal column widths and fitting the table to a width
-│   ├── grid.ts           placing cells with spans on a grid
-│   ├── layout.ts         column width math: scaling, equal widths
-│   ├── properties.ts     property types, and checking colors and alignments
-│   └── cellValue.ts      the tablekit-cell value: checking it, reading and writing it on elements
+│   ├── TableModel.ts       a table as a grid of cells: reading and writing its lines, finding cells
+│   ├── tableLines.ts       grouping a Delta's lines into rows of cells
+│   ├── normalize.ts        removing rows and columns where no cell starts
+│   ├── cell.ts             a single cell, and empty or copied cells
+│   ├── grid.ts             placing cells with spans on a grid
+│   ├── layout.ts           column width math: scaling, equal widths, CSS widths
+│   ├── properties.ts       property types, and checking colors and alignments
+│   ├── cellValue.ts        the tablekit-cell value: checking it, reading and writing it on elements
+│   └── operations/
+│       ├── rowsAndColumns.ts   inserting and deleting rows and columns
+│       ├── arrange.ts          moving and duplicating rows and columns
+│       ├── merging.ts          merging and splitting cells
+│       ├── cellChanges.ts      cell style, text alignment, clearing text
+│       ├── paste.ts            pasting one table over the cells of another
+│       └── widths.ts           equal column widths and fitting the table to a width
 ├── styles/
-│   ├── css.ts            the CSS
-│   └── injectStyles.ts   adds it to the page once
+│   ├── css.ts              puts the parts below together
+│   ├── tableStyles.ts      the table in the editor: borders, spacing, stripes, header, caption
+│   ├── overlayStyles.ts    the highlight, the current cell, the resize lines and handle
+│   ├── pickerStyles.ts     the floating boxes and the size picker
+│   ├── actionBarStyles.ts  the action bar
+│   ├── menuStyles.ts       the table menu
+│   ├── panelStyles.ts      the properties panel and its color buttons
+│   ├── fieldStyles.ts      swatches, color inputs, toggles, choices
+│   └── injectStyles.ts     adds the CSS to the page once
 ├── ui/
-│   ├── TableControls.ts  the picker, the menu and the panel, and what opens them
-│   ├── ActionBar.ts      the bar with buttons next to the table
-│   ├── icons.ts          the icons on the action bar
-│   ├── TablePicker.ts    the size picker
-│   ├── TableMenu.ts      the table menu
-│   ├── tableMenuItems.ts which items the menu shows, and which are disabled
-│   ├── PropertiesPanel.ts the panel: rows of choices, toggles, text and color buttons
-│   ├── ColorField.ts     a color button that opens the colors and the custom color row under it
-│   ├── propertyFields.ts which fields the cell and table panels show
-│   ├── Popover.ts        the floating box the picker, menu and panel use
-│   ├── toolbarButton.ts  hooking up the table button in the toolbar
-│   ├── contextMenu.ts    opening the menu on right-click
-│   ├── CellSelection.ts  the blue highlight over selected cells
-│   ├── ColumnResizer.ts  the line you drag to resize a column
-│   ├── RowResizer.ts     the line you drag to resize a row
-│   ├── TableResizer.ts   the round corner handle you drag to resize the whole table
-│   ├── dragging.ts       following the mouse until it's released
-│   ├── fitting.ts        measuring the content's widths, and an equal row height
-│   ├── domGrid.ts        reading the table on screen as a grid, measuring columns
-│   └── dom.ts            small createElement helper
+│   ├── TableControls.ts    the picker, the menu and the panel, and what opens them
+│   ├── TablePicker.ts      the size picker
+│   ├── Popover.ts          the floating box the picker, menu and panel use
+│   ├── CellSelection.ts    the blue highlight over selected cells, and the current cell
+│   ├── toolbarButton.ts    hooking up the table button in the toolbar
+│   ├── icons.ts            the icons on the action bar
+│   ├── domGrid.ts          reading the table on screen as a grid, measuring, zoom
+│   ├── dom.ts              small createElement helper
+│   ├── actionBar/
+│   │   ├── ActionBar.ts    the bar next to the cell you're in
+│   │   ├── BarButtons.ts   its buttons: menus, toggles, Merge or Split
+│   │   ├── buttonSpecs.ts  which buttons there are, and which the menu option allows
+│   │   ├── barPosition.ts  where the bar goes: above the row, or below it
+│   │   └── rovingFocus.ts  moving between the buttons with the arrow keys
+│   ├── menu/
+│   │   ├── TableMenu.ts    the table menu
+│   │   ├── tableMenuItems.ts which items the menu shows, and which are disabled
+│   │   ├── menuActions.ts  what each menu item runs
+│   │   └── contextMenu.ts  opening the menu on right-click
+│   ├── panel/
+│   │   ├── PropertiesPanel.ts the panel: rows of choices, toggles, text and color buttons
+│   │   ├── ColorField.ts   a color button that opens the colors and the custom color row under it
+│   │   └── propertyFields.ts which fields the cell and table panels show
+│   └── resize/
+│       ├── ColumnResizer.ts    the line you drag to resize a column
+│       ├── RowResizer.ts       the line you drag to resize a row
+│       ├── TableResizer.ts     the round corner handle you drag to resize the whole table
+│       ├── resizeMath.ts       the sizes after a drag, without the DOM
+│       ├── dragging.ts         following the mouse until it's released
+│       └── fitting.ts          measuring the content's widths, and an equal row height
 └── utils/
-    ├── quill.ts          Delta, Parchment and Module from Quill (see "The CDN build")
-    ├── style.ts          setting an inline style only when it changes
-    ├── editorWidth.ts    how wide the editor's content is
-    └── support.ts        checking the Quill version
+    ├── quill.ts            Delta, Parchment and Module from Quill (see "The CDN build")
+    ├── style.ts            setting an inline style only when it changes
+    ├── editorWidth.ts      how wide the editor's content is
+    ├── array.ts            a small range helper
+    └── support.ts          checking the Quill version
 ```
+
+No file is longer than about 210 lines, except `TableKit.ts`, which is mostly one short method per public action. When a file grows past that, split it by job, like the action bar's buttons, position and keyboard handling.
 
 ## How a table is stored
 
@@ -109,20 +142,20 @@ A few things that look odd:
 - `TableCellLine.format()` ignores headers, lists, code blocks and quotes. Those formats replace the line with a different blot, and that would pull it out of the table.
 - Column widths go into a `<colgroup>`, but that `<colgroup>` sits in Parchment's "UI node" spot (`attachUI`). Parchment skips that spot when it reads the document, so the colgroup never ends up in the Delta. The widths themselves are stored on the lines.
 - While you drag a column, a row or the table corner, the table itself doesn't change. Only a guide moves with the mouse: a line for a column or row, a dashed outline for the table. That's cheap, so the drag stays smooth even on big tables. The new sizes are saved once when you let go of the mouse, so a drag is also one undo step.
-- The guide is moved at most once per frame (`ui/dragging.ts`), and the resizers only build the table grid when the mouse is right on a cell border.
-- `getSemanticHTML` would normally use Quill's own HTML function, but Quill doesn't export it. `blots/html.ts` does the same thing for tables, minus the editor's classes and data attributes. If the selection is inside one cell, it returns just the paragraphs, so copying a word doesn't paste a one-cell table somewhere else. A table without resized columns gets `width: 100%`, same as in the editor.
+- The guide is moved at most once per frame (`ui/resize/dragging.ts`), and the resizers only build the table grid when the mouse is right on a cell border.
+- `getSemanticHTML` would normally use Quill's own HTML function, but Quill doesn't export it. `html/tableHTML.ts` does the same thing for tables, minus the editor's classes and data attributes. If the selection is inside one cell, it returns just the paragraphs, so copying a word doesn't paste a one-cell table somewhere else. A table without resized columns gets `width: 100%`, same as in the editor.
 
 ## How editing works
 
 Changes like inserting a row or merging cells don't touch the page directly. They go like this:
 
 1. Get the table's lines with `quill.getContents(tableStart, tableLength)` and turn them into a `TableModel`. That's a grid, and a merged cell just takes up several spots in it. This is `getTableContext` in `editing/context.ts`.
-2. Change the grid: add a row, merge, split, whatever. The changes themselves are functions in `model/` that take the `TableModel`, like `insertRow(model, rowIndex)` in `rowsAndColumns.ts` or `mergeCells(model, area)` in `merging.ts`. `editing/edits.ts` wraps each one in a small function that runs it on the selection and returns the cell the cursor should go to.
+2. Change the grid: add a row, merge, split, whatever. The changes themselves are functions in `model/operations/` that take the `TableModel`, like `insertRow(model, rowIndex)` in `rowsAndColumns.ts` or `mergeCells(model, area)` in `merging.ts`. `editing/edits.ts` wraps each one in a small function that runs it on the selection and returns the cell the cursor should go to.
 3. Turn the grid back into lines with `toDelta()`, compare that with the old lines, and apply the difference with `updateContents`. That's `commitTable` in `editing/commands.ts`.
 
 If the cursor ends up in the same cell it started in, it keeps its spot in the text. Otherwise it goes to the start of the new cell.
 
-So adding a new table action means writing the change in `model/`, one function in `edits.ts` and a one-line method in `TableKit.ts` that runs it. The `TableModel` class itself only holds the table and knows how to read and write it, so it doesn't grow with every new action.
+So adding a new table action means writing the change in `model/operations/`, one function in `edits.ts` and a one-line method in `TableKit.ts` that runs it. The `TableModel` class itself only holds the table and knows how to read and write it, so it doesn't grow with every new action.
 
 Property changes (`editing/properties.ts`) go through the same three steps, but they don't move the cursor. They only change attributes, so the document doesn't get longer or shorter and the selection can stay where it was. That's why the panel can stay open while you click a few things.
 
@@ -134,7 +167,7 @@ Some rules inside the model:
 - After a change, `normalize()` removes rows and columns where no cell starts. Those can't be stored as lines (a row with no cell starting in it has no lines), so they'd disappear the next time the table is read anyway, and leave the spans wrong.
 - A new row extends a merged cell that crosses it, instead of cutting it in two.
 - A new column copies its neighbour's width, then all columns shrink a bit so the table stays the same width.
-- Moving a row first grows the selected rows into a block that no merged cell crosses (`wholeRows` in `model/arrange.ts`). The neighbour is grown the same way, and then the two blocks swap places. Since no merged cell crosses either block, the grid is still valid after the swap. Columns work the same way.
+- Moving a row first grows the selected rows into a block that no merged cell crosses (`wholeRows` in `model/operations/arrange.ts`). The neighbour is grown the same way, and then the two blocks swap places. Since no merged cell crosses either block, the grid is still valid after the swap. Columns work the same way.
 - Duplicating copies a block like that. A merged cell is copied once and that copy fills all its spots, so it stays merged.
 
 The screen side (`ui/domGrid.ts`) uses the same placing function on the real `<td>` elements. That's how the highlight and the resize line agree with the model on where each cell is.
@@ -149,7 +182,7 @@ Quill's normal behavior breaks tables in a few places:
 - Deleting a selection that covers several cells joins all of them.
 - Typing `1. ` turns the line into a list.
 
-`editing/keyboard.ts` adds key bindings for these. Quill runs bindings in the order they were added, and its defaults are added first, so ours get moved to the front of the list.
+`editing/input/keyboard.ts` adds key bindings for these. Quill runs bindings in the order they were added, and its defaults are added first, so ours get moved to the front of the list.
 
 Deleting a selection that touches a table is done by `deleteSelection` in `editing/selection.ts`:
 
@@ -158,13 +191,13 @@ Deleting a selection that touches a table is done by `deleteSelection` in `editi
 - A table that's completely inside the selection is removed.
 - A line outside a table is never joined onto the first line of a table that stays.
 
-Paste, cut and typing over a selection don't go through key bindings. `editing/inputGuards.ts` listens for them on the editor container in the capture phase, so it runs before Quill's own handlers. When you paste into a cell, every pasted line becomes a line of that cell, and the last pasted line joins the line you were on. When you paste a table in the middle of a line, the line is split first, so the text before the cursor doesn't end up in the first cell.
+Paste, cut and typing over a selection don't go through key bindings. `editing/input/inputGuards.ts` listens for them on the editor container in the capture phase, so it runs before Quill's own handlers. When you paste into a cell, every pasted line becomes a line of that cell, and the last pasted line joins the line you were on. When you paste a table in the middle of a line, the line is split first, so the text before the cursor doesn't end up in the first cell.
 
 Pasted text from the Windows clipboard uses `\r\n`. Quill turns a lone `\r` into a line break without any attributes, which would push the line out of the table, so `\r\n` is changed to `\n` first.
 
 ### Up and Down
 
-The browser's own Up and Down in a table follow the screen, not the grid, so with merged cells they can land in odd places. `editing/verticalNavigation.ts` only steps in when the cursor is on the first visual line of its cell (for Up) or the last one (for Down). It checks that by comparing `quill.getBounds()` of the cursor with the start or end of the cell, so lines that wrap count too. Everywhere else the browser moves the cursor inside the cell as usual.
+The browser's own Up and Down in a table follow the screen, not the grid, so with merged cells they can land in odd places. `editing/input/verticalNavigation.ts` only steps in when the cursor is on the first visual line of its cell (for Up) or the last one (for Down). It checks that by comparing `quill.getBounds()` of the cursor with the start or end of the cell, so lines that wrap count too. Everywhere else the browser moves the cursor inside the cell as usual.
 
 When it steps in, it finds the cell in the next row under the cursor's x position, then asks the browser for the text position at that x on the cell's first or last line (`caretPositionFromPoint`, or `caretRangeFromPoint` in older Chrome and Safari). If that fails, the cursor goes to the start or end of the cell.
 
@@ -172,7 +205,7 @@ Tab, Shift+Tab, Up and Down don't build a `TableModel`, because they only move t
 
 ## Pasted stripes
 
-A pasted table doesn't say it's striped, it just has colored cells. `findStripes` in `editing/clipboard.ts` looks for the pattern instead: under the header row, every other row has mostly one background, and the rows between don't have it at all. Then the table gets `striped` and that `stripeColor`, and those cells don't keep the color as their own background. One colored row isn't enough to tell stripes from a colored total row, so that needs two, unless it's the default stripe color.
+A pasted table doesn't say it's striped, it just has colored cells. `findStripes` in `editing/clipboard/pastedTableStyle.ts` looks for the pattern instead: under the header row, every other row has mostly one background, and the rows between don't have it at all. Then the table gets `striped` and that `stripeColor`, and those cells don't keep the color as their own background. One colored row isn't enough to tell stripes from a colored total row, so that needs two, unless it's the default stripe color.
 
 ## Percent widths
 
@@ -186,7 +219,7 @@ The conversion uses the real content width. The resize limit uses that width min
 
 ## Fitting columns to content
 
-In the editor the columns have fixed widths, so long text just wraps and there's nothing to measure. `contentColumnWidths` in `ui/fitting.ts` puts a copy of the table in a hidden box inside `.ql-container` (outside the editor, so Quill doesn't see it), with automatic table layout and no widths. The browser then gives each column the width its content wants, and those widths are measured and saved the normal way. The copy is removed right away.
+In the editor the columns have fixed widths, so long text just wraps and there's nothing to measure. `contentColumnWidths` in `ui/resize/fitting.ts` puts a copy of the table in a hidden box inside `.ql-container` (outside the editor, so Quill doesn't see it), with automatic table layout and no widths. The browser then gives each column the width its content wants, and those widths are measured and saved the normal way. The copy is removed right away.
 
 ## Captions
 
@@ -208,9 +241,14 @@ When the module is only registered, not enabled (like for a read-only viewer), `
 
 ## Tests
 
-- `tests/model/`: the model, the grid and the cell value, no editor needed. One test file per model file, with shared helpers in `tests/model/modelHelpers.ts` (`tableWithTexts` builds a model from a grid of texts, `textsOf` reads it back).
+The tests follow the source folders:
+
+- `tests/model/`: the model, the grid and the cell value, no editor needed. `tests/model/operations/` has one file per file in `src/model/operations/`, with shared helpers in `tests/model/modelHelpers.ts` (`tableWithTexts` builds a model from a grid of texts, `textsOf` reads it back).
 - `tests/ui/`: the resize math.
-- `tests/editor/`: the module in a real Quill under jsdom. Inserting, toolbar and panel, the action bar, keyboard, merging and rows/columns, moving and duplicating, selecting rows and adding paragraphs, properties and table style, clipboard, saved content, cleanup.
+- `tests/editor/`: the module in a real Quill under jsdom: inserting, structure, keyboard, moving between cells, arranging rows and columns, saved content, cleanup.
+- `tests/clipboard/`: pasting HTML and text, copying cells, pasting into cells.
+- `tests/properties/`: cell and table properties, header row and column, table style, stripes, responsive widths.
+- `tests/controls/`: the size picker, the table menu, the action bar, the properties panel and its color fields.
 
 Shared helpers are in `tests/helpers.ts`. jsdom doesn't do layout, so things like dragging a column, where the highlight sits, Up and Down through wrapped lines, and zoom are checked by hand in the demo in a real browser.
 

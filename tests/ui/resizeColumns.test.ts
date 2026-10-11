@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resizeColumns, tableLeftAfterResize } from '../../src/ui/ColumnResizer'
+import { resizeColumns, tableLeftAfterResize } from '../../src/ui/resize/resizeMath'
 
 describe('resizeColumns', () => {
   it('trades width between neighbours for an inner edge', () => {

@@ -1,4 +1,4 @@
-import { setTextAlign, updateCellStyle } from '../model/cellChanges'
+import { setTextAlign, updateCellStyle } from '../model/operations/cellChanges'
 import {
   normalizeBorderStyle,
   normalizeCaption,

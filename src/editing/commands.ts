@@ -1,17 +1,14 @@
 import Quill from 'quill'
 import type { Range } from 'quill'
-import { TableCell, TableContainer, TableRow } from '../blots'
+import { TableContainer } from '../blots'
 import type { CellData } from '../model/cell'
-import { clearContent } from '../model/cellChanges'
-import { pasteTable, type PasteLimits } from '../model/paste'
-import { insertRow } from '../model/rowsAndColumns'
 import type { WidthUnit } from '../model/properties'
 import { TableModel } from '../model/TableModel'
 import { Delta } from '../utils/quill'
 import { getTableContext, readTable, type TableContext } from './context'
 import type { TableEdit } from './edits'
 import type { TableChange } from './properties'
-import { deleteSelection, lastSelectedLine, lineAt, needsTableAwareDelete, tableOf } from './selection'
+import { lineAt, tableOf } from './selection'
 import { percentBasis, widthsToSave } from './widthUnits'
 
 export const updateWithHistory = (quill: Quill, documentChange: Delta): void => {
@@ -57,8 +54,24 @@ export const runEdit = (quill: Quill, range: Range | null, edit: TableEdit): voi
   commitTable(quill, tableContext, cellToFocus, caretOffset)
 }
 
+const insertBelowTable = (quill: Quill, tableBlot: TableContainer, tableContents: Delta): void => {
+  const tableEnd = quill.getIndex(tableBlot) + tableBlot.length()
+  const isAtDocumentEnd = tableEnd >= quill.getLength()
+  const contents = new Delta().insert('\n').concat(tableContents)
+
+  updateWithHistory(quill, new Delta().retain(tableEnd).concat(isAtDocumentEnd ? contents.insert('\n') : contents))
+  quill.setSelection(tableEnd + 1, 0, 'user')
+}
+
 export const insertTable = (quill: Quill, range: Range, rowCount: number, columnCount: number): void => {
-  if (lineAt(quill, range.index)) return
+  const cellLine = lineAt(quill, range.index)
+  const currentTable = cellLine && tableOf(cellLine)
+  let tableContents = TableModel.create(rowCount, columnCount).toDelta()
+
+  if (currentTable) {
+    insertBelowTable(quill, currentTable, tableContents)
+    return
+  }
 
   const [currentLine] = quill.getLine(range.index)
 
@@ -67,7 +80,6 @@ export const insertTable = (quill: Quill, range: Range, rowCount: number, column
   const isEmptyLine = currentLine.length() <= 1
   const insertIndex = quill.getIndex(currentLine) + (isEmptyLine ? 0 : currentLine.length())
   const isAtDocumentEnd = insertIndex >= quill.getLength()
-  let tableContents = TableModel.create(rowCount, columnCount).toDelta()
 
   if (!isEmptyLine && isAtDocumentEnd) tableContents = tableContents.insert('\n')
 
@@ -99,47 +111,6 @@ export const setTableLayout = (
   commitTable(quill, tableContext, null)
 }
 
-// Moving one cell over doesn't need to read the whole table 
-const adjacentCell = (cell: TableCell, direction: 1 | -1): TableCell | null => {
-  const sibling = direction > 0 ? cell.next : cell.prev
-
-  if (sibling instanceof TableCell) return sibling
-
-  const row = direction > 0 ? cell.parent.next : cell.parent.prev
-  const edgeCell = row instanceof TableRow ? (direction > 0 ? row.children.head : row.children.tail) : null
-
-  return edgeCell instanceof TableCell ? edgeCell : null
-}
-
-const selectCellText = (quill: Quill, cellStart: number, cellLength: number) => {
-  quill.setSelection(cellStart, Math.max(0, cellLength - 1), 'user')
-}
-
-const addRowAndMoveThere = (quill: Quill, range: Range): void => {
-  const tableContext = getTableContext(quill, range)
-
-  if (!tableContext) return
-
-  const { model, tableStart } = tableContext
-  const [newCell] = insertRow(model, model.rowCount)
-
-  commitTable(quill, tableContext, null)
-  selectCellText(quill, tableStart + model.cellOffset(newCell.id), newCell.content.length())
-}
-
-export const moveToCell = (quill: Quill, range: Range | null, direction: 1 | -1): boolean => {
-  const cell = range ? lineAt(quill, range.index)?.parent : null
-
-  if (!range || !(cell instanceof TableCell)) return false
-
-  const targetCell = adjacentCell(cell, direction)
-
-  if (targetCell) selectCellText(quill, quill.getIndex(targetCell), targetCell.length())
-  else if (direction > 0) addRowAndMoveThere(quill, range)
-
-  return true
-}
-
 export const changeTable = (quill: Quill, range: Range | null, change: TableChange): void => {
   if (!quill.isEnabled()) return
 
@@ -149,30 +120,6 @@ export const changeTable = (quill: Quill, range: Range | null, change: TableChan
 
   change(tableContext)
   commitTable(quill, tableContext, null)
-}
-
-export const selectCells = (quill: Quill, range: Range | null, wholeLines: 'rows' | 'columns'): void => {
-  const tableContext = getTableContext(quill, range)
-
-  if (!tableContext) return
-
-  const { model, selectedArea, tableStart } = tableContext
-  const area =
-    wholeLines === 'rows'
-      ? { ...selectedArea, left: 0, right: model.columnCount }
-      : { ...selectedArea, top: 0, bottom: model.rowCount }
-  const cellPositions = model
-    .cellsInArea(model.expandToWholeCells(area))
-    .map((cell) => ({ start: model.cellOffset(cell.id), textLength: cell.content.length() - 1 }))
-    .sort((first, second) => first.start - second.start)
-  const firstCell = cellPositions[0]
-  const lastCell = cellPositions.at(-1)
-
-  if (!firstCell || !lastCell) return
-
-  const selectionLength = lastCell.start + lastCell.textLength - firstCell.start
-
-  quill.setSelection(tableStart + firstCell.start, selectionLength, 'user')
 }
 
 export const insertParagraph = (quill: Quill, range: Range | null, side: 'above' | 'below'): void => {
@@ -187,47 +134,4 @@ export const insertParagraph = (quill: Quill, range: Range | null, side: 'above'
 
   updateWithHistory(quill, new Delta().retain(paragraphIndex).insert('\n'))
   quill.setSelection(paragraphIndex, 0, 'user')
-}
-
-export const selectedCellsContext = (quill: Quill, range: Range): TableContext | null => {
-  if (range.length === 0) return null
-
-  const startLine = lineAt(quill, range.index)
-  const endLine = lastSelectedLine(quill, range)
-
-  if (!startLine || !endLine || tableOf(startLine) !== tableOf(endLine)) return null
-  if (startLine.cellValue.cell === endLine.cellValue.cell) return null
-
-  return getTableContext(quill, range)
-}
-
-export const deleteSelectedContent = (quill: Quill, range: Range): boolean => {
-  const tableContext = selectedCellsContext(quill, range)
-
-  if (tableContext) {
-    const { model, selectedArea, startCell } = tableContext
-
-    clearContent(model.cellsInArea(selectedArea))
-    commitTable(quill, tableContext, startCell)
-
-    return true
-  }
-
-  if (!needsTableAwareDelete(quill, range)) return false
-
-  deleteSelection(quill, range)
-  return true
-}
-
-export const pasteTableIntoCells = (
-  quill: Quill,
-  tableContext: TableContext,
-  pastedContent: Delta,
-  limits: PasteLimits,
-): void => {
-  const { model, selectedArea } = tableContext
-  const pastedTable = TableModel.fromDelta(pastedContent)
-  const pastedArea = pasteTable(model, pastedTable, selectedArea.top, selectedArea.left, limits)
-
-  commitTable(quill, tableContext, model.grid[pastedArea.top][pastedArea.left])
 }

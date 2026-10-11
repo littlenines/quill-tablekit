@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Delta } from 'quill'
 import { CELL_FORMAT } from '../../src/config/constants'
 import { TableModel } from '../../src/model/TableModel'
-import { mergeCells } from '../../src/model/merging'
+import { mergeCells } from '../../src/model/operations/merging'
 import { cellValuesIn, tableLine } from './modelHelpers'
 
 describe('TableModel', () => {

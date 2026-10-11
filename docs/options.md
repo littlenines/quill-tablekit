@@ -90,7 +90,7 @@ The action bar follows the same list: a button only shows if at least one of its
 
 If you listed your items before a version added new ones, you won't see the new ones until you add them to your list.
 
-With an empty list there's no table menu and no action bar at all, and the table button does nothing while the cursor is in a table. You can still call every action from your own code, see [API](./api.md).
+With an empty list there's no table menu and no action bar at all, and the table button only inserts tables. You can still call every action from your own code, see [API](./api.md).
 
 ## Colors
 
