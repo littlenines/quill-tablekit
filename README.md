@@ -1,18 +1,45 @@
 <h1 align="center">quill-tablekit</h1>
 
-<p align="center">Tables for Quill 2. Merge cells, resize columns, and paste tables from Word, Excel or Markdown.</p>
-
 <p align="center">
-  <a href="https://www.npmjs.com/package/quill-tablekit"><img src="https://img.shields.io/npm/v/quill-tablekit?style=flat" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/quill-tablekit"><img src="https://img.shields.io/npm/dm/quill-tablekit?style=flat" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/Quill-2.x-blue?style=flat" alt="Quill 2.x" />
-  <img src="https://img.shields.io/badge/types-TypeScript-blue?style=flat" alt="TypeScript types included" />
+  <img src="https://img.shields.io/npm/v/quill-tablekit" alt="version" />
+  <img src="https://img.shields.io/bundlephobia/minzip/quill-tablekit?style=flat" alt="size" />
   <img src="https://img.shields.io/npm/l/quill-tablekit?style=flat" alt="license" />
+  <img src="https://img.shields.io/npm/dt/quill-tablekit?style=flat&color=blue&cacheSeconds=3600" alt="downloads" />
+  <img src="https://img.shields.io/badge/Quill_compatible-2.0.3-blue?style=flat&cacheSeconds=3600" alt="Quill compatible 2.0.3" />
 </p>
 
-Tables are saved in the normal Quill Delta, so saving, loading and undo just work. Use it with plain JavaScript, React, Vue, Svelte, Angular, Next.js, Nuxt or whatever you like.
+`quill-tablekit` is a Quill 2 module for tables you can actually edit: merge cells, resize columns, and paste tables from Word, Excel or Markdown.
 
-## Features
+
+---
+
+- [Features](#features)
+- [Installation](#installation)
+  - [npm](#npm)
+  - [CDN](#cdn)
+- [Usage](#usage)
+  - [Import the module](#1-import-the-module)
+  - [Register the module with Quill](#2-register-the-module-with-quill)
+  - [Configure the Quill editor](#3-configure-the-quill-editor)
+- [Frameworks](#frameworks)
+- [Options](#options)
+  - [Option Descriptions](#option-descriptions)
+  - [Menu Items](#menu-items)
+  - [Labels](#labels)
+  - [Icons](#icons)
+  - [Colors](#colors)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+- [API](#api)
+- [TypeScript](#typescript)
+- [Saving Content](#saving-content)
+- [Cleanup / Destroy](#cleanup--destroy)
+- [Problems](#problems)
+- [Docs](#docs)
+- [License](#license)
+
+---
+
+## [Features](#features)
 
 - Insert tables from the toolbar, with the mouse or keyboard
 - Add, move, duplicate, select and delete rows and columns
@@ -36,50 +63,83 @@ Tables are saved in the normal Quill Delta, so saving, loading and undo just wor
 - Translatable, with your own colors, icons and menu
 - API for your own buttons
 - TypeScript types included
-- Works with `resize-quill-image` and `quill-image-alt`
+- Works with [`resize-quill-image`](https://www.npmjs.com/package/resize-quill-image) and [`quill-image-alt`](https://www.npmjs.com/package/quill-image-alt)
 
-## Installation
+## [Installation](#installation)
+
+### [npm](#npm)
 
 ```bash
 npm install quill-tablekit
 ```
 
-```bash
-pnpm add quill-tablekit
-# or
-yarn add quill-tablekit
+You also need `quill` 2.x. It's a peer dependency, so it isn't installed for you. Quill 1 isn't supported.
+
+> **Compatible with [`react-quill-new`](https://www.npmjs.com/package/react-quill-new)**, since it uses Quill 2.x under the hood.
+
+### [CDN](#cdn)
+
+Load Quill first, then the module. The module is available as a global `QuillTableKit` variable.
+
+**unpkg:**
+
+```html
+<link href="https://unpkg.com/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
+<script src="https://unpkg.com/quill@2.0.3/dist/quill.js"></script>
+<script src="https://unpkg.com/quill-tablekit/dist/index.iife.js"></script>
 ```
 
-You also need `quill` 2.x. It's a peer dependency, so install it yourself if you don't have it yet. Quill 1 isn't supported.
-
-### CDN
-
-Load Quill first. The module is then available as `QuillTableKit`:
+**jsDelivr:**
 
 ```html
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/quill-tablekit/dist/index.iife.js"></script>
+```
 
-<div id="editor"></div>
+You can pin to a specific version:
+
+```html
+<script src="https://unpkg.com/quill-tablekit@0.1.0/dist/index.iife.js"></script>
+```
+
+Then register and use it:
+
+```html
 <script>
   Quill.register('modules/tableKit', QuillTableKit)
 
-  new Quill('#editor', { theme: 'snow', modules: { toolbar: [['bold', 'italic'], ['table']], tableKit: true } })
+  const quill = new Quill('#editor', {
+    theme: 'snow',
+    modules: { toolbar: [['bold', 'italic'], ['table']], tableKit: true },
+  })
 </script>
 ```
 
-## Usage
+> **Note:** Quill must be loaded before `quill-tablekit`. The CDN build reads `Quill` from the global scope when it loads.
+
+---
+
+## [Usage](#usage)
+
+### 1. Import the module
 
 ```js
-import Quill from 'quill'
 import TableKit from 'quill-tablekit'
-import 'quill/dist/quill.snow.css'
+```
 
+### 2. Register the module with Quill
+
+```js
 Quill.register('modules/tableKit', TableKit)
+```
 
-const quill = new Quill('#editor', {
-  theme: 'snow',
+### 3. Configure the Quill editor
+
+Add `'table'` to the toolbar to get the table button:
+
+```js
+const quill = new Quill(editorContainer, {
   modules: {
     toolbar: [
       ['bold', 'italic'],
@@ -87,22 +147,25 @@ const quill = new Quill('#editor', {
     ],
     tableKit: true,
   },
+  theme: 'snow',
 })
 ```
 
-- Add `'table'` to the toolbar to get the table button.
-- The module's CSS is added for you.
-- Don't turn on Quill's own `table` module at the same time. Both use the same button.
+The module's CSS is added for you. Don't turn on Quill's own `table` module at the same time, since both use the same button.
 
-Click the table button and pick a size. Then click into the table and a bar shows up with everything else. [Usage](https://github.com/littlenines/quill-tablekit/blob/master/docs/usage.md) explains all of it.
+Click the table button and pick a size. Then click into the table and a small bar shows up with everything else. [Usage](https://github.com/littlenines/quill-tablekit/blob/master/docs/usage.md) explains all of it.
 
-## Frameworks
+---
 
-It works with React, Vue, Svelte, Angular, Next.js, Nuxt and others, and with `react-quill-new`. Examples are in [Frameworks](https://github.com/littlenines/quill-tablekit/blob/master/docs/react.md).
+## [Frameworks](#frameworks)
 
-## Options
+It works with React, Vue, Svelte, Angular, Next.js, Nuxt and others. Examples are in [Frameworks](https://github.com/littlenines/quill-tablekit/blob/master/docs/react.md).
 
-Pass an object instead of `true` to change something. Everything is optional:
+---
+
+## [Options](#options)
+
+You can change the behavior by passing an object instead of `true`. Everything is optional:
 
 ```js
 tableKit: {
@@ -112,7 +175,9 @@ tableKit: {
 }
 ```
 
-| Option             | Type      | Default    | What it does                                                                         |
+### [Option Descriptions](#option-descriptions)
+
+| Option             | Type      | Default    | Description                                                                          |
 | ------------------ | --------- | ---------- | ------------------------------------------------------------------------------------ |
 | `pickerRows`       | `number`  | `8`        | Rows in the size picker grid.                                                        |
 | `pickerColumns`    | `number`  | `10`       | Columns in the size picker grid.                                                     |
@@ -124,20 +189,26 @@ tableKit: {
 | `sortable`         | `boolean` | `false`    | Adds Sort A → Z and Sort Z → A.                                                      |
 | `responsiveWidths` | `boolean` | `true`     | Saves widths as a share of the editor, so tables follow its width. `false` saves px. |
 | `minColumnWidth`   | `number`  | `40`       | Narrowest a column can get, in px.                                                   |
-| `menu`             | `array`   | every item | Which actions the menu and the action bar show. See [Menu items](#menu-items).       |
+| `menu`             | `array`   | every item | Which actions the menu and the action bar show. See [Menu Items](#menu-items).       |
 | `colors`           | `array`   | 15 colors  | The colors in the properties panel. Any CSS color works.                             |
 | `icons`            | `object`  | built in   | Your own icons. See [Icons](#icons).                                                 |
 | `labels`           | `object`  | English    | Every text the module shows, for example to translate it. See [Labels](#labels).     |
 
-### Menu items
+### [Menu Items](#menu-items)
 
 List the ones you want to keep. They always show in this order:
 
 `insertRowAbove` · `insertRowBelow` · `insertColumnLeft` · `insertColumnRight` · `moveRowUp` · `moveRowDown` · `moveColumnLeft` · `moveColumnRight` · `duplicateRow` · `duplicateColumn` · `sortAscending` · `sortDescending` · `insertParagraphAbove` · `insertParagraphBelow` · `equalColumnWidths` · `fitToContent` · `fitToWidth` · `equalRowHeights` · `selectRow` · `selectColumn` · `copyTable` · `copyAsMarkdown` · `mergeCells` · `splitCell` · `headerRow` · `headerColumn` · `cellProperties` · `tableProperties` · `deleteRow` · `deleteColumn` · `deleteTable`
 
+```js
+tableKit: {
+  menu: ['insertRowBelow', 'insertColumnRight', 'mergeCells', 'splitCell', 'deleteTable'],
+}
+```
+
 The two sort items only show with `sortable: true`. With an empty list there's no menu and no action bar, but every action still works from the [API](#api).
 
-### Labels
+### [Labels](#labels)
 
 Only pass the texts you want to change, for example to translate them. Each menu item has a label with the same name:
 
@@ -154,7 +225,7 @@ tableKit: {
 
 All labels and their default texts are in [Options](https://github.com/littlenines/quill-tablekit/blob/master/docs/options.md#labels).
 
-### Icons
+### [Icons](#icons)
 
 Swap any icon for your own SVG or icon font. Only use markup you trust:
 
@@ -169,7 +240,7 @@ tableKit: {
 
 The names are `rows`, `columns`, `merge`, `split`, `headerRow`, `headerColumn`, `cellProperties`, `tableProperties`, `more`, `deleteTable`, `chevron`, and `insertTable` for the toolbar button.
 
-### Colors
+### [Colors](#colors)
 
 The module's own colors are CSS variables. Set them on the editor container:
 
@@ -186,9 +257,11 @@ The module's own colors are CSS variables. Set them on the editor container:
 
 Colors picked in the properties panel win over these. Class names and more are in [Options](https://github.com/littlenines/quill-tablekit/blob/master/docs/options.md#colors-and-styles).
 
-## Keyboard
+---
 
-| Key                    | What it does                                                                          |
+## [Keyboard Shortcuts](#keyboard-shortcuts)
+
+| Key                    | Behavior                                                                              |
 | ---------------------- | ------------------------------------------------------------------------------------- |
 | `Tab` / `Shift + Tab`  | Next or previous cell. Tab in the last cell adds a row.                               |
 | `↑` / `↓`              | The cell above or below, after moving through the lines of the current cell.          |
@@ -197,7 +270,9 @@ Colors picked in the properties panel win over these. Class names and more are i
 | `Alt + F10`            | Moves the focus to the action bar. The arrow keys move between its buttons.           |
 | `Escape`               | Hides the action bar, or closes a menu or panel.                                      |
 
-## API
+---
+
+## [API](#api)
 
 Everything the toolbar and the action bar do, you can also call yourself, for example from your own buttons. The methods work on the table where the cursor is:
 
@@ -208,10 +283,6 @@ tableKit.insertTable(3, 4)
 tableKit.mergeCells()
 tableKit.setTableProperties({ header: true, striped: true, caption: 'Sales by region' })
 tableKit.setCellProperties({ background: '#fff2cc', verticalAlign: 'middle' })
-
-quill.on('selection-change', () => {
-  mergeButton.disabled = !tableKit.canMergeCells()
-})
 ```
 
 | Method                                                                  | What it does                                                                            |
@@ -238,30 +309,125 @@ quill.on('selection-change', () => {
 | `fitColumnsToContent()`, `fitTableToWidth()`                            | Makes each column as wide as its content, or the table as wide as the editor.           |
 | `moveToCell(direction)`                                                 | Goes to the next (`1`) or previous (`-1`) cell, like Tab.                               |
 | `isInTable()`                                                           | `true` if the cursor is in a table.                                                     |
-| `destroy()`                                                             | Removes everything the module added. See [Cleanup](#cleanup).                           |
+| `destroy()`                                                             | Removes everything the module added. See [Cleanup / Destroy](#cleanup--destroy).        |
 
 Each change is one undo step. All fields and values are in [API](https://github.com/littlenines/quill-tablekit/blob/master/docs/api.md).
 
-## Saving content
+---
+
+## [TypeScript](#typescript)
+
+This package ships TypeScript definitions. The option and property types are exported for use in your own types:
+
+```ts
+import TableKit from 'quill-tablekit'
+import type { TableKitOptions, TableMenuItemName, TableProperties } from 'quill-tablekit'
+
+const menu: TableMenuItemName[] = ['mergeCells', 'splitCell']
+const options: TableKitOptions = { sortable: true, menu }
+
+const tableKit = quill.getModule('tableKit') as TableKit
+const properties: TableProperties | null = tableKit.getTableProperties()
+```
+
+---
+
+## [Saving Content](#saving-content)
 
 Save `quill.getContents()` like any Delta and load it with `setContents()`. To show it on a page:
 
-- with JavaScript, use a read-only Quill with the module registered;
-- without Quill (server rendering, emails, apps), save `quill.getSemanticHTML()` next to the Delta and show that.
+- with JavaScript, use a read-only Quill with the module registered
+- without Quill (server rendering, emails, apps), save `quill.getSemanticHTML()` next to the Delta and show that
 
-Other Delta-to-HTML libraries like `quill-delta-to-html` don't know the table format. More in [Saved content](https://github.com/littlenines/quill-tablekit/blob/master/docs/content.md).
+More in [Saved content](https://github.com/littlenines/quill-tablekit/blob/master/docs/content.md).
 
-## Cleanup
+---
 
-Before you remove an editor (component unmount, route change), call `destroy()`:
+## [Cleanup / Destroy](#cleanup--destroy)
+
+If you mount and unmount the editor (for example in a single page app or on route changes), clean up the module to avoid memory leaks or things happening twice.
+
+Call `destroy()` **before** clearing the DOM:
 
 ```js
-quill.getModule('tableKit')?.destroy()
+const tableKitModule = quill.getModule('tableKit')
+
+tableKitModule?.destroy()
+
+container.innerHTML = ''
 ```
 
-It removes the module's listeners, popups, keyboard shortcuts and paste handling.
+This will:
 
-## Docs
+- Remove all event listeners
+- Remove the picker, menu, action bar, panels and resize lines
+- Remove its keyboard shortcuts and paste handling
+- Give the toolbar's table button back to Quill
+
+**When to use:**
+
+- If you're unmounting your editor component
+- If you're switching pages in an SPA
+- If you're creating Quill again yourself
+
+**Example with unmount:**
+
+```js
+useEffect(() => {
+  const quill = new Quill(editorRef.current, { ... })
+
+  return () => {
+    quill.getModule('tableKit')?.destroy()
+    editorRef.current.innerHTML = ''
+  }
+}, [])
+```
+
+---
+
+## [Problems](#problems)
+
+### <ins>Problem: The picker or menu goes outside the editor</ins>
+
+If your `.ql-container` has a fixed height like this:
+
+```css
+.ql-container {
+  height: 500px;
+}
+```
+
+then the picker, the menu and the cell highlight can end up outside the editor when you scroll.
+
+**Solution:**
+
+Instead of a fixed height, use `min-height` and `max-height`:
+
+```css
+.ql-container {
+  min-height: 500px;
+  max-height: 500px;
+  overflow: auto;
+}
+```
+
+### <ins>Problem: The table button does nothing</ins>
+
+Check that Quill's own `table` module isn't turned on in `modules`. Both use the `table` toolbar button, so only use `tableKit`.
+
+### <ins>Problem: Tables have no borders outside the editor</ins>
+
+You're probably saving `quill.root.innerHTML`. That's the editor's own markup, and its table styles only exist inside the editor. Use `quill.getSemanticHTML()` instead.
+
+### <ins>Problem: Headers or lists don't work inside a cell</ins>
+
+That's on purpose. A cell can only hold normal lines, otherwise the line would get pulled out of the table. Bold, italic, links, colors, images and alignment all work.
+
+More in [Troubleshooting](https://github.com/littlenines/quill-tablekit/blob/master/docs/troubleshooting.md).
+
+---
+
+## [Docs](#docs)
 
 - [Installation](https://github.com/littlenines/quill-tablekit/blob/master/docs/installation.md): npm, CDN, Quill versions
 - [Usage](https://github.com/littlenines/quill-tablekit/blob/master/docs/usage.md): inserting, merging, resizing, sorting, properties, keyboard, copy and paste
@@ -273,11 +439,12 @@ It removes the module's listeners, popups, keyboard shortcuts and paste handling
 - [Limitations](https://github.com/littlenines/quill-tablekit/blob/master/docs/limitations.md): what it can't do
 - [How it works](https://github.com/littlenines/quill-tablekit/blob/master/docs/architecture.md): the code, running it locally, tests
 
-All pages are also listed on the [docs page](https://github.com/littlenines/quill-tablekit/blob/master/docs/README.md).
+## [License](#license)
 
-## License
+MIT License
+Free for personal and commercial use.
 
-MIT
+---
 
 > [!NOTE]
 > Found a bug or something odd? [Open an issue](https://github.com/littlenines/quill-tablekit/issues). Contributions are welcome.

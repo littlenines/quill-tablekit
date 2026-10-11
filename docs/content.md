@@ -8,7 +8,7 @@
 
 ## What the Delta looks like
 
-Tables are stored in the normal Quill Delta. So `getContents()`, `setContents()`, `updateContents()` and undo all just work.
+Tables are stored in the Quill Delta like the rest of your content, so you can use `getContents()`, `setContents()`, `updateContents()` and undo as usual.
 
 Every line inside a table has a `tablekit-cell` attribute that says which table, row and cell it's in:
 
