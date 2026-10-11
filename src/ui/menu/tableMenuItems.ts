@@ -6,6 +6,7 @@ import {
 } from '../../config/options'
 import { canMerge, canSplit, type TableContext } from '../../editing/context'
 import { canMoveColumns, canMoveRows } from '../../model/operations/arrange'
+import { canSortRows } from '../../model/operations/sort'
 import { hasEqualColumns } from '../../model/operations/widths'
 import type { MenuItem } from './TableMenu'
 
@@ -23,6 +24,8 @@ export const tableMenuItems = (
     moveRowDown: { enabled: canMoveRows(model, selectedArea, 1) },
     moveColumnLeft: { enabled: canMoveColumns(model, selectedArea, -1) },
     moveColumnRight: { enabled: canMoveColumns(model, selectedArea, 1) },
+    sortAscending: { enabled: canSortRows(model) },
+    sortDescending: { enabled: canSortRows(model) },
     equalColumnWidths: { enabled: !hasEqualColumns(model) },
     fitToWidth: { enabled: model.columnWidths != null },
     equalRowHeights: { enabled: model.rowCount > 1 },

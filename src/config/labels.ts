@@ -14,6 +14,8 @@ export interface TableKitLabels {
   moveColumnRight: string
   duplicateRow: string
   duplicateColumn: string
+  sortAscending: string
+  sortDescending: string
   equalColumnWidths: string
   fitToContent: string
   fitToWidth: string
@@ -82,6 +84,8 @@ export const DEFAULT_LABELS = {
   moveColumnRight: 'Move column right',
   duplicateRow: 'Duplicate row',
   duplicateColumn: 'Duplicate column',
+  sortAscending: 'Sort A → Z',
+  sortDescending: 'Sort Z → A',
   equalColumnWidths: 'Equal column widths',
   fitToContent: 'Fit columns to content',
   fitToWidth: 'Fit table to width',

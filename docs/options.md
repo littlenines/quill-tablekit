@@ -34,6 +34,7 @@ new Quill('#editor', {
 | `contextMenu`      | `false`    | Right-click on a cell opens the table menu instead of the browser's menu.                                   |
 | `actionBar`        | `true`     | Shows the bar with buttons next to the table while the cursor is in it.                                     |
 | `resizable`        | `true`     | Lets you drag borders to resize columns and rows, and the corner to resize the table.                       |
+| `sortable`         | `false`    | Adds the sort items to the menu and the Columns button. See [Usage](./usage.md#sorting).                    |
 | `responsiveWidths` | `true`     | Saves resized widths as a share of the editor. `false` saves px. See [Usage](./usage.md#responsive-widths). |
 | `minColumnWidth`   | `40`       | Narrowest a column can be dragged, in px.                                                                   |
 | `menu`             | every item | Which items the table menu shows. See [Menu](#menu).                                                        |
@@ -55,36 +56,38 @@ tableKit: {
 
 The order in the menu stays the same no matter what order you list them in. These are all the items:
 
-| Item                   | What it does                                  |
-| ---------------------- | --------------------------------------------- |
-| `insertRowAbove`       | Adds a row above.                             |
-| `insertRowBelow`       | Adds a row below.                             |
-| `insertColumnLeft`     | Adds a column on the left.                    |
-| `insertColumnRight`    | Adds a column on the right.                   |
-| `moveRowUp`            | Swaps the row with the one above.             |
-| `moveRowDown`          | Swaps the row with the one below.             |
-| `moveColumnLeft`       | Swaps the column with the one on the left.    |
-| `moveColumnRight`      | Swaps the column with the one on the right.   |
-| `duplicateRow`         | Adds a copy of the row below it.              |
-| `duplicateColumn`      | Adds a copy of the column on its right.       |
-| `insertParagraphAbove` | Adds an empty line before the table.          |
-| `insertParagraphBelow` | Adds an empty line after the table.           |
-| `equalColumnWidths`    | Makes every column the same width.            |
-| `fitToContent`         | Makes each column as wide as its content.     |
-| `fitToWidth`           | Makes the table as wide as the editor.        |
-| `equalRowHeights`      | Makes every row the same height.              |
-| `selectRow`            | Selects the whole row.                        |
-| `selectColumn`         | Selects the whole column.                     |
-| `copyTable`            | Copies the whole table to the clipboard.      |
-| `mergeCells`           | Merges the selected cells.                    |
-| `splitCell`            | Splits a merged cell.                         |
-| `headerRow`            | Turns the header row on or off.               |
-| `headerColumn`         | Turns the header column on or off.            |
-| `cellProperties`       | Opens the panel for background and alignment. |
-| `tableProperties`      | Opens the panel for the whole table.          |
-| `deleteRow`            | Removes the selected rows.                    |
-| `deleteColumn`         | Removes the selected columns.                 |
-| `deleteTable`          | Removes the table.                            |
+| Item                   | What it does                                                   |
+| ---------------------- | -------------------------------------------------------------- |
+| `insertRowAbove`       | Adds a row above.                                              |
+| `insertRowBelow`       | Adds a row below.                                              |
+| `insertColumnLeft`     | Adds a column on the left.                                     |
+| `insertColumnRight`    | Adds a column on the right.                                    |
+| `moveRowUp`            | Swaps the row with the one above.                              |
+| `moveRowDown`          | Swaps the row with the one below.                              |
+| `moveColumnLeft`       | Swaps the column with the one on the left.                     |
+| `moveColumnRight`      | Swaps the column with the one on the right.                    |
+| `duplicateRow`         | Adds a copy of the row below it.                               |
+| `duplicateColumn`      | Adds a copy of the column on its right.                        |
+| `sortAscending`        | Sorts the rows A → Z by the cursor's column. Needs `sortable`. |
+| `sortDescending`       | Sorts the rows Z → A by the cursor's column. Needs `sortable`. |
+| `insertParagraphAbove` | Adds an empty line before the table.                           |
+| `insertParagraphBelow` | Adds an empty line after the table.                            |
+| `equalColumnWidths`    | Makes every column the same width.                             |
+| `fitToContent`         | Makes each column as wide as its content.                      |
+| `fitToWidth`           | Makes the table as wide as the editor.                         |
+| `equalRowHeights`      | Makes every row the same height.                               |
+| `selectRow`            | Selects the whole row.                                         |
+| `selectColumn`         | Selects the whole column.                                      |
+| `copyTable`            | Copies the whole table to the clipboard.                       |
+| `mergeCells`           | Merges the selected cells.                                     |
+| `splitCell`            | Splits a merged cell.                                          |
+| `headerRow`            | Turns the header row on or off.                                |
+| `headerColumn`         | Turns the header column on or off.                             |
+| `cellProperties`       | Opens the panel for background and alignment.                  |
+| `tableProperties`      | Opens the panel for the whole table.                           |
+| `deleteRow`            | Removes the selected rows.                                     |
+| `deleteColumn`         | Removes the selected columns.                                  |
+| `deleteTable`          | Removes the table.                                             |
 
 The action bar follows the same list: a button only shows if at least one of its items is in it.
 
@@ -166,6 +169,8 @@ tableKit: {
 | `moveColumnRight`      | Move column right            |
 | `duplicateRow`         | Duplicate row                |
 | `duplicateColumn`      | Duplicate column             |
+| `sortAscending`        | Sort A → Z                   |
+| `sortDescending`       | Sort Z → A                   |
 | `equalColumnWidths`    | Equal column widths          |
 | `fitToContent`         | Fit columns to content       |
 | `fitToWidth`           | Fit table to width           |

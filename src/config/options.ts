@@ -7,6 +7,7 @@ export type TableKitIcons = Record<keyof typeof ICONS, string>
 export const MENU_GROUPS = [
   ['insertRowAbove', 'insertRowBelow', 'insertColumnLeft', 'insertColumnRight'],
   ['moveRowUp', 'moveRowDown', 'moveColumnLeft', 'moveColumnRight', 'duplicateRow', 'duplicateColumn'],
+  ['sortAscending', 'sortDescending'],
   ['insertParagraphAbove', 'insertParagraphBelow'],
   ['equalColumnWidths', 'fitToContent', 'fitToWidth', 'equalRowHeights'],
   ['selectRow', 'selectColumn', 'copyTable'],
@@ -19,6 +20,8 @@ export type TableMenuItemName = (typeof MENU_GROUPS)[number][number]
 
 export const MENU_ITEM_NAMES: readonly TableMenuItemName[] = MENU_GROUPS.flat()
 
+const SORT_ITEMS: readonly TableMenuItemName[] = ['sortAscending', 'sortDescending']
+
 export interface TableKitOptions {
   pickerRows?: number
   pickerColumns?: number
@@ -26,6 +29,7 @@ export interface TableKitOptions {
   maxColumns?: number
   contextMenu?: boolean
   resizable?: boolean
+  sortable?: boolean
   responsiveWidths?: boolean
   actionBar?: boolean
   minColumnWidth?: number
@@ -65,6 +69,7 @@ export const DEFAULT_OPTIONS = {
   maxColumns: 30,
   contextMenu: false,
   resizable: true,
+  sortable: false,
   responsiveWidths: true,
   actionBar: true,
   minColumnWidth: 40,
@@ -93,18 +98,26 @@ const iconsOr = (input: unknown, fallback: TableKitIcons): TableKitIcons => {
   return { ...fallback, ...Object.fromEntries(knownIcons) }
 }
 
-export const resolveOptions = (userOptions: TableKitOptions = {}): ResolvedTableKitOptions => ({
-  pickerRows: positiveWholeNumberOr(userOptions.pickerRows, DEFAULT_OPTIONS.pickerRows),
-  pickerColumns: positiveWholeNumberOr(userOptions.pickerColumns, DEFAULT_OPTIONS.pickerColumns),
-  maxRows: positiveWholeNumberOr(userOptions.maxRows, DEFAULT_OPTIONS.maxRows),
-  maxColumns: positiveWholeNumberOr(userOptions.maxColumns, DEFAULT_OPTIONS.maxColumns),
-  contextMenu: userOptions.contextMenu ?? DEFAULT_OPTIONS.contextMenu,
-  resizable: userOptions.resizable ?? DEFAULT_OPTIONS.resizable,
-  responsiveWidths: userOptions.responsiveWidths ?? DEFAULT_OPTIONS.responsiveWidths,
-  actionBar: userOptions.actionBar ?? DEFAULT_OPTIONS.actionBar,
-  minColumnWidth: positiveWholeNumberOr(userOptions.minColumnWidth, DEFAULT_OPTIONS.minColumnWidth),
-  menu: menuItemsOr(userOptions.menu, DEFAULT_OPTIONS.menu),
-  colors: colorsOr(userOptions.colors, DEFAULT_OPTIONS.colors),
-  icons: iconsOr(userOptions.icons, DEFAULT_OPTIONS.icons),
-  labels: { ...DEFAULT_LABELS, ...userOptions.labels },
-})
+const withSorting = (menu: TableMenuItemName[], sortable: boolean): TableMenuItemName[] =>
+  sortable ? menu : menu.filter((menuItemName) => !SORT_ITEMS.includes(menuItemName))
+
+export const resolveOptions = (userOptions: TableKitOptions = {}): ResolvedTableKitOptions => {
+  const sortable = userOptions.sortable ?? DEFAULT_OPTIONS.sortable
+
+  return {
+    pickerRows: positiveWholeNumberOr(userOptions.pickerRows, DEFAULT_OPTIONS.pickerRows),
+    pickerColumns: positiveWholeNumberOr(userOptions.pickerColumns, DEFAULT_OPTIONS.pickerColumns),
+    maxRows: positiveWholeNumberOr(userOptions.maxRows, DEFAULT_OPTIONS.maxRows),
+    maxColumns: positiveWholeNumberOr(userOptions.maxColumns, DEFAULT_OPTIONS.maxColumns),
+    contextMenu: userOptions.contextMenu ?? DEFAULT_OPTIONS.contextMenu,
+    resizable: userOptions.resizable ?? DEFAULT_OPTIONS.resizable,
+    sortable,
+    responsiveWidths: userOptions.responsiveWidths ?? DEFAULT_OPTIONS.responsiveWidths,
+    actionBar: userOptions.actionBar ?? DEFAULT_OPTIONS.actionBar,
+    minColumnWidth: positiveWholeNumberOr(userOptions.minColumnWidth, DEFAULT_OPTIONS.minColumnWidth),
+    menu: withSorting(menuItemsOr(userOptions.menu, DEFAULT_OPTIONS.menu), sortable),
+    colors: colorsOr(userOptions.colors, DEFAULT_OPTIONS.colors),
+    icons: iconsOr(userOptions.icons, DEFAULT_OPTIONS.icons),
+    labels: { ...DEFAULT_LABELS, ...userOptions.labels },
+  }
+}

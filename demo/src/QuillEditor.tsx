@@ -33,7 +33,7 @@ const QuillEditor = forwardRef<Quill | null>(function QuillEditor(_props, ref) {
       placeholder: 'Compose an epic...',
       modules: {
         toolbar: toolbarOptions,
-        tableKit: { pickerRows: 8, pickerColumns: 10 },
+        tableKit: { pickerRows: 8, pickerColumns: 10, sortable: true },
         imageResize: { helpIcon: true, displaySize: true },
         altText: true,
       },

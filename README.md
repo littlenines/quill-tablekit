@@ -9,7 +9,7 @@ A [Quill](https://quilljs.com/) 2 module for tables you can actually edit. Table
 ## Features
 
 - Insert tables from a size picker in the toolbar
-- Add, delete, move and duplicate rows and columns
+- Add, delete, move and duplicate rows and columns, and sort rows by a column (opt-in)
 - Merge and split cells
 - Resize columns, rows and the whole table by dragging, responsive by default
 - Header row and header column, cell colors, alignment, borders, striped rows, captions
@@ -88,6 +88,7 @@ tableKit: {
 | `actionBar`        | `boolean` | `true`     | Shows the bar with buttons next to the cell you're in.                               |
 | `contextMenu`      | `boolean` | `false`    | Right-click on a cell opens the table menu instead of the browser's menu.            |
 | `resizable`        | `boolean` | `true`     | Lets you drag to resize columns, rows and the whole table.                           |
+| `sortable`         | `boolean` | `false`    | Adds Sort A → Z and Sort Z → A to the menu and the Columns button.                   |
 | `responsiveWidths` | `boolean` | `true`     | Saves widths as a share of the editor, so tables follow its width. `false` saves px. |
 | `minColumnWidth`   | `number`  | `40`       | Narrowest a column can get, in px.                                                   |
 | `menu`             | `array`   | every item | Which actions the menu and the action bar show. See [Menu items](#menu-items).       |
@@ -99,9 +100,9 @@ tableKit: {
 
 Pass the ones you want to keep. They always show in this order:
 
-`insertRowAbove` · `insertRowBelow` · `insertColumnLeft` · `insertColumnRight` · `moveRowUp` · `moveRowDown` · `moveColumnLeft` · `moveColumnRight` · `duplicateRow` · `duplicateColumn` · `insertParagraphAbove` · `insertParagraphBelow` · `equalColumnWidths` · `fitToContent` · `fitToWidth` · `equalRowHeights` · `selectRow` · `selectColumn` · `copyTable` · `mergeCells` · `splitCell` · `headerRow` · `headerColumn` · `cellProperties` · `tableProperties` · `deleteRow` · `deleteColumn` · `deleteTable`
+`insertRowAbove` · `insertRowBelow` · `insertColumnLeft` · `insertColumnRight` · `moveRowUp` · `moveRowDown` · `moveColumnLeft` · `moveColumnRight` · `duplicateRow` · `duplicateColumn` · `sortAscending` · `sortDescending` · `insertParagraphAbove` · `insertParagraphBelow` · `equalColumnWidths` · `fitToContent` · `fitToWidth` · `equalRowHeights` · `selectRow` · `selectColumn` · `copyTable` · `mergeCells` · `splitCell` · `headerRow` · `headerColumn` · `cellProperties` · `tableProperties` · `deleteRow` · `deleteColumn` · `deleteTable`
 
-With an empty list there's no menu and no action bar, but every action still works from the [API](#api).
+The two sort items only show when `sortable` is `true`. With an empty list there's no menu and no action bar, but every action still works from the [API](#api).
 
 ### Labels
 
@@ -179,30 +180,31 @@ quill.on('selection-change', () => {
 })
 ```
 
-| Method                                                                  | What it does                                                                   |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `insertTable(rows, columns)`                                            | Adds a table at the cursor.                                                    |
-| `deleteTable()`                                                         | Removes the table.                                                             |
-| `insertRowAbove()`, `insertRowBelow()`                                  | Adds a row.                                                                    |
-| `insertColumnLeft()`, `insertColumnRight()`                             | Adds a column.                                                                 |
-| `deleteRow()`, `deleteColumn()`                                         | Removes the rows or columns the selection touches.                             |
-| `moveRowUp()`, `moveRowDown()`, `moveColumnLeft()`, `moveColumnRight()` | Swaps the row or column with its neighbour.                                    |
-| `duplicateRow()`, `duplicateColumn()`                                   | Adds a copy of the row or column next to it.                                   |
-| `mergeCells()`, `splitCell()`                                           | Merges the selected cells, or splits the merged cell.                          |
-| `canMergeCells()`, `canSplitCell()`                                     | `true` if merging or splitting is possible right now.                          |
-| `selectRow()`, `selectColumn()`                                         | Selects the whole row or column.                                               |
-| `insertParagraphAbove()`, `insertParagraphBelow()`                      | Adds an empty line before or after the table.                                  |
-| `copyTable()`                                                           | Copies the table to the clipboard. Returns a promise with `true` if it worked. |
-| `getCellProperties()`, `setCellProperties(changes)`                     | Reads or changes the selected cells. See below.                                |
-| `getTableProperties()`, `setTableProperties(changes)`                   | Reads or changes the whole table. See below.                                   |
-| `setColumnWidths(table, widths)`                                        | Sets the column widths in px for a `<table>` element, or `null` for automatic. |
-| `setRowHeights(table, heights)`                                         | Sets the row heights in px, `null` for a row that fits its content.            |
-| `equalizeColumnWidths()`, `equalizeRowHeights()`                        | Makes every column, or every row, the same size.                               |
-| `fitColumnsToContent()`, `fitTableToWidth()`                            | Makes each column as wide as its content, or the table as wide as the editor.  |
-| `moveToCell(direction)`                                                 | Goes to the next (`1`) or previous (`-1`) cell, like Tab.                      |
-| `isInTable()`                                                           | `true` if the cursor is in a table.                                            |
-| `getContext()`                                                          | The table under the cursor as a grid, for building your own UI.                |
-| `destroy()`                                                             | Removes the module's listeners and popups. See [Cleanup](#cleanup).            |
+| Method                                                                  | What it does                                                                                                      |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `insertTable(rows, columns)`                                            | Adds a table at the cursor.                                                                                       |
+| `deleteTable()`                                                         | Removes the table.                                                                                                |
+| `insertRowAbove()`, `insertRowBelow()`                                  | Adds a row.                                                                                                       |
+| `insertColumnLeft()`, `insertColumnRight()`                             | Adds a column.                                                                                                    |
+| `deleteRow()`, `deleteColumn()`                                         | Removes the rows or columns the selection touches.                                                                |
+| `moveRowUp()`, `moveRowDown()`, `moveColumnLeft()`, `moveColumnRight()` | Swaps the row or column with its neighbour.                                                                       |
+| `duplicateRow()`, `duplicateColumn()`                                   | Adds a copy of the row or column next to it.                                                                      |
+| `sortByColumn(order)`                                                   | Sorts the rows by the cursor's column: numbers, then dates, then text. `'ascending'` (default) or `'descending'`. |
+| `mergeCells()`, `splitCell()`                                           | Merges the selected cells, or splits the merged cell.                                                             |
+| `canMergeCells()`, `canSplitCell()`                                     | `true` if merging or splitting is possible right now.                                                             |
+| `selectRow()`, `selectColumn()`                                         | Selects the whole row or column.                                                                                  |
+| `insertParagraphAbove()`, `insertParagraphBelow()`                      | Adds an empty line before or after the table.                                                                     |
+| `copyTable()`                                                           | Copies the table to the clipboard. Returns a promise with `true` if it worked.                                    |
+| `getCellProperties()`, `setCellProperties(changes)`                     | Reads or changes the selected cells. See below.                                                                   |
+| `getTableProperties()`, `setTableProperties(changes)`                   | Reads or changes the whole table. See below.                                                                      |
+| `setColumnWidths(table, widths)`                                        | Sets the column widths in px for a `<table>` element, or `null` for automatic.                                    |
+| `setRowHeights(table, heights)`                                         | Sets the row heights in px, `null` for a row that fits its content.                                               |
+| `equalizeColumnWidths()`, `equalizeRowHeights()`                        | Makes every column, or every row, the same size.                                                                  |
+| `fitColumnsToContent()`, `fitTableToWidth()`                            | Makes each column as wide as its content, or the table as wide as the editor.                                     |
+| `moveToCell(direction)`                                                 | Goes to the next (`1`) or previous (`-1`) cell, like Tab.                                                         |
+| `isInTable()`                                                           | `true` if the cursor is in a table.                                                                               |
+| `getContext()`                                                          | The table under the cursor as a grid, for building your own UI.                                                   |
+| `destroy()`                                                             | Removes the module's listeners and popups. See [Cleanup](#cleanup).                                               |
 
 Each change is one undo step.
 

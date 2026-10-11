@@ -2,6 +2,7 @@ import * as arrange from '../model/operations/arrange'
 import type { CellData } from '../model/cell'
 import * as merging from '../model/operations/merging'
 import * as rowsAndColumns from '../model/operations/rowsAndColumns'
+import * as sorting from '../model/operations/sort'
 import type { TableContext } from './context'
 
 export type TableEdit = (tableContext: TableContext) => CellData | null | undefined
@@ -39,6 +40,14 @@ export const duplicateRows: TableEdit = keepingCursorCell(({ model, selectedArea
 
 export const duplicateColumns = (minWidth: number): TableEdit =>
   keepingCursorCell(({ model, selectedArea }) => arrange.duplicateColumns(model, selectedArea, minWidth))
+
+export const sortRows =
+  (order: sorting.SortOrder, language: string): TableEdit =>
+  ({ model, startCell }) => {
+    const column = model.areaOf(startCell)?.left ?? -1
+
+    return sorting.sortRows(model, column, order, language) ? startCell : undefined
+  }
 
 export const deleteRows: TableEdit = ({ model, selectedArea }) => {
   rowsAndColumns.deleteRows(model, selectedArea.top, selectedArea.bottom)

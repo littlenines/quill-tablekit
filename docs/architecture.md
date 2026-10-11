@@ -71,6 +71,8 @@ src/
 │       ├── merging.ts          merging and splitting cells
 │       ├── cellChanges.ts      cell style, text alignment, clearing text
 │       ├── paste.ts            pasting one table over the cells of another
+│       ├── sort.ts             sorting the rows by a column
+│       ├── sortKeys.ts         reading a cell as a number, a date or text, and comparing them
 │       └── widths.ts           equal column widths and fitting the table to a width
 ├── styles/
 │   ├── css.ts              puts the parts below together

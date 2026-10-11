@@ -21,6 +21,7 @@ import {
 import { isInTable } from './editing/selection'
 import { percentBasis } from './editing/widthUnits'
 import type { CellProperties, TableProperties, WidthUnit } from './model/properties'
+import type { SortOrder } from './model/operations/sort'
 import { fitColumnWidthsWithin } from './model/layout'
 import { equalizeColumnWidths, fitToWidth } from './model/operations/widths'
 import { injectStyles } from './styles/injectStyles'
@@ -154,6 +155,10 @@ class TableKit extends Module<TableKitOptions> {
 
   duplicateColumn(): void {
     this.#edit(edits.duplicateColumns(this.#settings.minColumnWidth))
+  }
+
+  sortByColumn(order: SortOrder = 'ascending'): void {
+    this.#edit(edits.sortRows(order, this.#language))
   }
 
   equalizeColumnWidths(): void {
@@ -301,6 +306,10 @@ class TableKit extends Module<TableKitOptions> {
 
   get #widthUnit(): WidthUnit {
     return this.#settings.responsiveWidths ? 'percent' : 'px'
+  }
+
+  get #language(): string {
+    return this.quill.root.closest('[lang]')?.getAttribute('lang') || navigator.language
   }
 
   #tableElementAtCursor(): HTMLTableElement | null {

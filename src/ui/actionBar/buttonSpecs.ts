@@ -33,6 +33,8 @@ const BUTTON_SPECS: ButtonSpec[] = [
       'moveColumnLeft',
       'moveColumnRight',
       'duplicateColumn',
+      'sortAscending',
+      'sortDescending',
       'equalColumnWidths',
       'fitToContent',
       'selectColumn',

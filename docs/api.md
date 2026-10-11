@@ -19,19 +19,20 @@ The methods work on the table where the cursor is. If the editor doesn't have fo
 
 ## Rows and columns
 
-| Method                                             | What it does                                                                                                           |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `insertRowAbove()`, `insertRowBelow()`             | Adds a row above or below the selected cells.                                                                          |
-| `insertColumnLeft()`, `insertColumnRight()`        | Adds a column left or right of the selected cells.                                                                     |
-| `deleteRow()`                                      | Removes every row the selection touches. If that's all of them, the table is removed.                                  |
-| `deleteColumn()`                                   | Same, for columns.                                                                                                     |
-| `moveRowUp()`, `moveRowDown()`                     | Swaps the selected rows with the row above or below. Merged cells move along with every row they cover.                |
-| `moveColumnLeft()`, `moveColumnRight()`            | Same, for columns. The column widths move too.                                                                         |
-| `duplicateRow()`                                   | Adds a copy of the selected rows right below them, with their text and colors.                                         |
-| `duplicateColumn()`                                | Adds a copy of the selected columns on their right. The table keeps its width.                                         |
-| `selectRow()`, `selectColumn()`                    | Selects every cell in the rows or columns the selection touches.                                                       |
-| `copyTable()`                                      | Copies the whole table to the clipboard as HTML and as tab-separated text. Returns a promise with `true` if it worked. |
-| `insertParagraphAbove()`, `insertParagraphBelow()` | Adds an empty line right before or after the table and moves the cursor there.                                         |
+| Method                                             | What it does                                                                                                                                                                                 |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `insertRowAbove()`, `insertRowBelow()`             | Adds a row above or below the selected cells.                                                                                                                                                |
+| `insertColumnLeft()`, `insertColumnRight()`        | Adds a column left or right of the selected cells.                                                                                                                                           |
+| `deleteRow()`                                      | Removes every row the selection touches. If that's all of them, the table is removed.                                                                                                        |
+| `deleteColumn()`                                   | Same, for columns.                                                                                                                                                                           |
+| `moveRowUp()`, `moveRowDown()`                     | Swaps the selected rows with the row above or below. Merged cells move along with every row they cover.                                                                                      |
+| `moveColumnLeft()`, `moveColumnRight()`            | Same, for columns. The column widths move too.                                                                                                                                               |
+| `duplicateRow()`                                   | Adds a copy of the selected rows right below them, with their text and colors.                                                                                                               |
+| `duplicateColumn()`                                | Adds a copy of the selected columns on their right. The table keeps its width.                                                                                                               |
+| `sortByColumn(order)`                              | Sorts the rows by the cursor's column, reading numbers, dates and text: `'ascending'` (the default) or `'descending'`. Works without the `sortable` option. See [Usage](./usage.md#sorting). |
+| `selectRow()`, `selectColumn()`                    | Selects every cell in the rows or columns the selection touches.                                                                                                                             |
+| `copyTable()`                                      | Copies the whole table to the clipboard as HTML and as tab-separated text. Returns a promise with `true` if it worked.                                                                       |
+| `insertParagraphAbove()`, `insertParagraphBelow()` | Adds an empty line right before or after the table and moves the cursor there.                                                                                                               |
 
 ## Merging
 

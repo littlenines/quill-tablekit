@@ -103,6 +103,24 @@ If a merged cell covers more than one row, those rows move together, and they ju
 
 **Duplicate row** adds a copy of the row right under it: the text, the colors, merged cells and the row height. **Duplicate column** adds a copy on the right. Like inserting a column, it keeps the table the same width.
 
+## Sorting
+
+Turn it on with `sortable: true`. Then the menu and the Columns button get **Sort A → Z** and **Sort Z → A**, which sort the rows by the column the cursor is in.
+
+- A column can mix numbers, dates and text. A → Z puts the numbers first, then the dates, then the text. Z → A turns all of that around.
+- Numbers sort by their value. They're read the way the editor's language writes them, so in German `1.234,5` is a bit over a thousand, and `1.5` works in any language.
+- Dates sort by the day they are, with the time if there is one. These are recognized: `2024-03-01`, `1.3.2024.` and `01.03.2024` (day first), and `03/01/2024`.
+- With slashes, the column decides whether the day or the month comes first: a `31/12/2023` anywhere in it means day first, a `12/31/2023` means month first. If nothing gives it away, the editor's language does (month first for US English, day first for most others).
+- Dates with month names (`Jan 5, 2024`, `5. januar 2024`) and dates that don't exist (`31.2.2024`) sort as text.
+- Text sorts in the editor's language's alphabet, and numbers inside text are compared by value (`Item 2` before `Item 10`). Upper and lower case count as the same letter.
+- Empty cells go last, in both orders. Rows with the same value keep their order.
+- The header row stays on top. Each row moves whole, with its colors and height.
+- A cell merged across rows would be cut apart, so with one in the table the sort items are grayed out. Cells merged across columns are fine.
+
+The editor's language is the `lang` attribute on the editor or the closest element above it (like `<html lang="sr">`), or the browser's language if there's none.
+
+Like every change, a sort is one undo step.
+
 ## Writing above or below a table
 
 If a table is the first thing in the document, there's no line above it to click into. Use **Insert paragraph above table**. It adds an empty line right before the table and puts the cursor there. **Insert paragraph below table** does the same after it. The new line is always a plain paragraph, even if the next line is a heading.
