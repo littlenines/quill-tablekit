@@ -6,6 +6,9 @@
   <img src="https://img.shields.io/npm/l/quill-tablekit?style=flat" alt="license" />
   <img src="https://img.shields.io/npm/dt/quill-tablekit?style=flat&color=blue&cacheSeconds=3600" alt="downloads" />
   <img src="https://img.shields.io/badge/Quill_compatible-2.0.3-blue?style=flat&cacheSeconds=3600" alt="Quill compatible 2.0.3" />
+  <a href="https://quill-tablekit.vercel.app/">
+    <img src="https://img.shields.io/badge/Live-Demo-00c7b7?logo=vercel&logoColor=white&style=flat-square" alt="Live Demo" />
+  </a>
 </p>
 
 `quill-tablekit` is a Quill 2 module for tables you can actually edit: merge cells, resize columns, and paste tables from Word, Excel or Markdown.
@@ -18,6 +21,7 @@
 
 ---
 
+- [Demo](#demo)
 - [Features](#features)
 - [Installation](#installation)
   - [npm](#npm)
@@ -43,6 +47,10 @@
 - [License](#license)
 
 ---
+
+## [Demo](#demo)
+
+[Check out the live demo](https://quill-tablekit.vercel.app/)
 
 ## [Features](#features)
 

@@ -1,6 +1,6 @@
 # Usage
 
-How to set it up, and everything you can do with a table.
+How to set it up, and everything you can do with a table. You can try all of it in the [live demo](https://quill-tablekit.vercel.app/).
 
 - [Setup](#setup)
 - [Inserting a table](#inserting-a-table)

@@ -13,7 +13,7 @@ pnpm format      # Prettier, 120 characters per line
 pnpm build       # ES, CJS and IIFE builds, plus .d.ts and .d.cts types in /dist
 ```
 
-The demo uses the files in `src` directly, so you can run `pnpm dev` in `demo/` and see your changes without building. Its Vite config also has `dedupe: ['quill']`. Without that, the demo and `src` would each load their own copy of Quill, and the tables wouldn't be registered on the one the editor uses.
+The demo uses the published npm package, like the [live demo](https://quill-tablekit.vercel.app/). To try your own changes, uncomment the `alias` in `demo/vite.config.ts` and the `paths` in `demo/tsconfig.app.json`, and add `"../src"` to its `include`. Then `pnpm dev` in `demo/` uses the files in `src` directly, without building. The Vite config also has `dedupe: ['quill']`. Without that, the demo and `src` would each load their own copy of Quill, and the tables wouldn't be registered on the one the editor uses.
 
 ## Where things are
 

@@ -1,6 +1,6 @@
 # quill-tablekit docs
 
-Start with [Installation](./installation.md) and [Setup](./usage.md#setup).
+Start with [Installation](./installation.md) and [Setup](./usage.md#setup). You can try everything in the [live demo](https://quill-tablekit.vercel.app/).
 
 ## Pages
 
