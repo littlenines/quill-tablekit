@@ -1,6 +1,6 @@
 {
   "name": "quill-tablekit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tables for Quill 2. Merge cells, resize columns, and paste tables from Word, Excel or Markdown.",
   "type": "module",
   "packageManager": "pnpm@11.9.0",
