@@ -99,7 +99,7 @@ export const setTableLayout = (
   commitTable(quill, tableContext, null)
 }
 
-// Moving one cell over doesn't need to read the whole table
+// Moving one cell over doesn't need to read the whole table 
 const adjacentCell = (cell: TableCell, direction: 1 | -1): TableCell | null => {
   const sibling = direction > 0 ? cell.next : cell.prev
 

@@ -51,7 +51,7 @@ const rgbToHex = (rgbColor: string): string => {
   return `#${channels.join('')}`
 }
 
-// Every line of a table carries its colors, so the same few are checked over and over
+// Every line of a table carries its colors, so the same few are checked over and over again -.-
 const MAX_REMEMBERED_COLORS = 500
 const browserColorAnswers = new Map<string, boolean>()
 
