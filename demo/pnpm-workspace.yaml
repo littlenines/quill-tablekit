@@ -4,3 +4,4 @@ packages:
 minimumReleaseAgeExclude:
   - quill-image-alt
   - resize-quill-image
+  - quill-tablekit@0.1.1

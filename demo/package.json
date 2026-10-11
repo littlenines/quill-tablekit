@@ -12,6 +12,7 @@
   "dependencies": {
     "quill": "^2.0.3",
     "quill-image-alt": "^0.1.4",
+    "quill-tablekit": "^0.1.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "resize-quill-image": "^1.0.14"

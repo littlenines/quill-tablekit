@@ -15,7 +15,8 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    "paths": { "quill-tablekit": ["../src/index.ts"] },
+    // To use the local source instead of the npm package, uncomment this and the alias in vite.config.ts
+    // "paths": { "quill-tablekit": ["../src/index.ts"] },
 
     /* Linting */
     "noUnusedLocals": true,
@@ -23,5 +24,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "../src"]
+  // With the local source, use ["src", "../src"]
+  "include": ["src"]
 }

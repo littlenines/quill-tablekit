@@ -1,4 +1,4 @@
-import { fileURLToPath } from 'node:url'
+// import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -6,7 +6,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { 'quill-tablekit': fileURLToPath(new URL('../src/index.ts', import.meta.url)) },
+    // To use the local source instead of the npm package, uncomment this and the paths in tsconfig.app.json
+    // alias: { 'quill-tablekit': fileURLToPath(new URL('../src/index.ts', import.meta.url)) },
     // Source and demo must share one Quill instance
     dedupe: ['quill'],
   },
