@@ -1,6 +1,6 @@
 import Quill from 'quill'
 import type { Delta as DeltaType, Parchment as ParchmentTypes } from 'quill'
-import type ModuleType from 'quill/core/module'
+import type ModuleType from 'quill/core/module.js'
 
 // Not named imports: the CDN build's global Quill has no Delta, Parchment or Module property
 export const Delta = Quill.import('delta') as typeof DeltaType

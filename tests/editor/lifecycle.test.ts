@@ -95,4 +95,28 @@ describe('destroy', () => {
     expect(contextMenuEvent.defaultPrevented).toBe(false)
     expect(host.querySelector('.qlt-menu')).toBeNull()
   })
+
+  it('lets go of the toolbar button', () => {
+    const { quill, tableKit, host } = setup()
+    const toolbar = quill.getModule('toolbar') as { handlers: Record<string, unknown> }
+
+    tableKit.destroy()
+    quill.setSelection(0, 0)
+    host.querySelector<HTMLButtonElement>('button.ql-table')?.click()
+
+    expect(host.querySelector('.qlt-picker')).toBeNull()
+    expect(toolbar.handlers.table).toBeUndefined()
+  })
+
+  it('takes out its keyboard bindings and paste matchers', () => {
+    const { quill, tableKit } = setupWithTable(1, 2)
+    const bindingCount = () => Object.values(quill.keyboard.bindings).flat().length
+    const matcherCount = quill.clipboard.matchers.length
+    const bindingsBefore = bindingCount()
+
+    tableKit.destroy()
+
+    expect(bindingsBefore - bindingCount()).toBe(8)
+    expect(matcherCount - quill.clipboard.matchers.length).toBe(3)
+  })
 })

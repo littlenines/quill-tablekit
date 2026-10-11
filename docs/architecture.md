@@ -10,7 +10,7 @@ pnpm test        # vitest with jsdom, using a real Quill
 pnpm typecheck
 pnpm lint        # ESLint, including the blank-line rules
 pnpm format      # Prettier, 120 characters per line
-pnpm build       # ES, CJS and IIFE builds plus one .d.ts in /dist
+pnpm build       # ES, CJS and IIFE builds, plus .d.ts and .d.cts types in /dist
 ```
 
 The demo uses the files in `src` directly, so you can run `pnpm dev` in `demo/` and see your changes without building. Its Vite config also has `dedupe: ['quill']`. Without that, the demo and `src` would each load their own copy of Quill, and the tables wouldn't be registered on the one the editor uses.
@@ -28,6 +28,7 @@ src/
 │   ├── TableBody.ts        <tbody>
 │   ├── TableContainer.ts   <table>: column widths, header row and column, alignment, borders, stripes, caption
 │   ├── grouping.ts         how the containers group lines together
+│   ├── lengthCache.ts      the containers' shared base, which keeps lengths while lines are only formatted
 │   └── index.ts            connects the blots and registers them
 ├── config/
 │   ├── constants.ts        format, blot and class names, default colors
@@ -152,6 +153,12 @@ A few things that look odd:
 - The guide is moved at most once per frame (`ui/resize/dragging.ts`), and the resizers only build the table grid when the mouse is right on a cell border.
 - `getSemanticHTML` would normally use Quill's own HTML function, but Quill doesn't export it. `html/tableHTML.ts` does the same thing for tables, minus the editor's classes and data attributes. If the selection is inside one cell, it returns just the paragraphs, so copying a word doesn't paste a one-cell table somewhere else. A table without resized columns gets `width: 100%`, same as in the editor.
 
+### Every line carries the table's settings
+
+The table's settings (widths, header, borders, caption...) are on every line of the table, not just the first. That looks wasteful, but Quill merges lines in ways that keep only one of the two lines' values: Backspace at the start of a line keeps that line's, deleting a selection across lines keeps the last line's, and Delete at the end of a line keeps the first one's. With the settings on one line only, some of those would quietly drop them. On every line, nothing can lose them.
+
+The cost is that changing a setting changes every line. For each changed line Quill asks the table, the body, the row and the cell for their length, and those add up all their lines each time. On a 100 × 30 table that took almost 2 seconds. A change that only formats lines can't change any length, so `commitTable` checks for that (no line added, removed or moved to another cell) and runs it in `withLinesKeptInPlace` from `blots/lengthCache.ts`. Every table container keeps its length for that one change, and anything that adds, removes or moves content in a table drops the kept lengths at once, even a `text-change` listener that types while the change is applied. That brought the 100 × 30 header toggle down to about a third of a second.
+
 ## How editing works
 
 Changes like inserting a row or merging cells don't touch the page directly. They go like this:
@@ -240,11 +247,21 @@ When a parent element has `transform: scale()`, `getBoundingClientRect()` gives 
 
 Quill only hooks up a toolbar button itself if its name is a registered format or it already has a handler. The full Quill build registers its own `table` format, so there Quill handles the click and calls our handler. In `quill/core` it doesn't, so the module adds the click listener itself. `ui/toolbarButton.ts` checks which case it is so the click isn't handled twice.
 
+When the module is destroyed, it puts back the toolbar's previous `table` handler, and takes its keyboard bindings and paste matchers out of Quill's lists, since Quill has no way to remove them.
+
+Opened with the keyboard (Enter or Space on the button), the picker, or the menu when there's no action bar, takes the focus, and Escape gives it back to the button. Opened with the mouse, the focus stays where it is, so the first cell doesn't light up under the mouse.
+
 ## The CDN build
 
 The IIFE build for CDNs uses the global `Quill`. That global doesn't have `Delta`, `Parchment` or `Module` on it, so `import { Delta } from 'quill'` would be `undefined` there. That's why `utils/quill.ts` gets them with `Quill.import()`. It works in every build, and Quill never gets bundled in a second time.
 
 When the module is only registered, not enabled (like for a read-only viewer), `register()` adds the CSS too, so the tables still look right.
+
+## The types
+
+The ES build gets `dist/index.d.ts`. The CommonJS build does `module.exports = TableKit`, so `require` users need types written with `export =`. `scripts/writeCommonJsTypes.mjs` runs after the build and writes `dist/index.d.cts`: a `TableKit` class with the other types on a namespace of the same name, all pointing at `index.d.ts`, so there's one copy of every type. `package.json` sends `import` and `require` to their own types.
+
+Type imports from Quill's subpaths end in `.js` (`quill/core/module.js`). Quill has no `exports` map, so without it projects with `moduleResolution: node16` or `nodenext` can't find them.
 
 ## Tests
 

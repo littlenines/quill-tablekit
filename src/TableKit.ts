@@ -92,10 +92,15 @@ class TableKit extends Module<TableKitOptions> {
       ]
     }
 
+    const pasteMatchers = [matchTableCell, matchTableRow, matchCaption]
+
     quill.clipboard.addMatcher('td, th', matchTableCell)
     quill.clipboard.addMatcher('tr', matchTableRow)
     quill.clipboard.addMatcher('caption', matchCaption)
-    installKeyboard(quill, (direction) => this.moveToCell(direction))
+    signal.addEventListener('abort', () => {
+      quill.clipboard.matchers = quill.clipboard.matchers.filter(([, matcher]) => !pasteMatchers.includes(matcher))
+    })
+    installKeyboard(quill, (direction) => this.moveToCell(direction), signal)
     installInputGuards(quill, container, this.#settings, signal)
     quill.on('editor-change', this.#handleEditorChange)
     quill.root.addEventListener('scroll', () => this.#updateCellHighlight(), { signal })

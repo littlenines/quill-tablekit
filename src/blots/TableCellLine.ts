@@ -1,5 +1,5 @@
 import Quill from 'quill'
-import type BlockType from 'quill/blots/block'
+import type BlockType from 'quill/blots/block.js'
 import { BLOT_NAMES, CELL_FORMAT, CLASS_NAMES } from '../config/constants'
 import {
   freshCellValue,

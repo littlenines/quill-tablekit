@@ -42,13 +42,14 @@ const MAX_CAPTION_LENGTH = 300
 const COLOR_PATTERN = /^(#[\da-f]{3,8}|(rgb|hsl)a?\([\d\s.,%+-]+\)|[a-z]+)$/i
 const NOT_A_COLOR = new Set(['transparent', 'inherit', 'initial', 'unset', 'revert', 'currentcolor', 'none'])
 
-const rgbToHex = (rgbColor: string): string => {
-  const channels = rgbColor
-    .slice(rgbColor.indexOf('(') + 1, -1)
-    .split(',')
-    .map((channel) => Number.parseInt(channel, 10).toString(16).padStart(2, '0'))
+const PLAIN_RGB = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i
 
-  return `#${channels.join('')}`
+const rgbToHex = (color: string): string => {
+  const channels = PLAIN_RGB.exec(color)?.slice(1)
+
+  if (!channels) return color
+
+  return `#${channels.map((channel) => Math.min(255, Number(channel)).toString(16).padStart(2, '0')).join('')}`
 }
 
 // Every line of a table carries its colors, so the same few are checked over and over again -.-
@@ -77,7 +78,7 @@ export const normalizeColor = (colorInput: unknown): string | undefined => {
   if (!COLOR_PATTERN.test(color) || NOT_A_COLOR.has(color.toLowerCase())) return undefined
   if (!isColorTheBrowserKnows(color)) return undefined
 
-  return color.startsWith('rgb(') ? rgbToHex(color) : color
+  return rgbToHex(color)
 }
 
 const oneOf = <Value extends string>(allowedValues: readonly Value[], input: unknown): Value | undefined =>

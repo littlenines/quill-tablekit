@@ -34,6 +34,8 @@ Settings are in [Options](./options.md), and there's a React example in [React](
 
 Click the table button in the toolbar. You'll see a grid: move the mouse over it and click when it shows the size you want. The grid is 8 × 10 by default.
 
+With the keyboard, press Enter on the table button. The focus goes into the grid: the arrow keys pick the size, Enter inserts it, Tab goes to the size boxes, and Escape closes the grid and goes back to the button.
+
 For bigger tables, type the rows and columns in the two boxes under the grid and press Insert. The limit is 100 × 30 unless you change `maxRows` and `maxColumns`.
 
 The table goes under the line you're on. If that line is empty, the table takes its place. There's always a line after the table, so you can keep typing below it.

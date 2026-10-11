@@ -5,6 +5,33 @@ import { setup, setupWithTable, shape, tables } from '../helpers'
 const clickTableButton = (host: HTMLElement) => host.querySelector<HTMLButtonElement>('button.ql-table')?.click()
 
 describe('size picker', () => {
+  it('takes the focus when opened with the keyboard, and gives it back on Escape', () => {
+    const { quill, host } = setup()
+    const tableButton = host.querySelector<HTMLButtonElement>('button.ql-table')
+
+    quill.setSelection(0, 0)
+    tableButton?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    tableButton?.click()
+
+    expect(document.activeElement).toBe(host.querySelector('.qlt-picker [data-rows="1"][data-columns="1"]'))
+
+    document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+
+    expect(host.querySelector('.qlt-picker')).toBeNull()
+    expect(document.activeElement).toBe(tableButton)
+  })
+
+  it('leaves the focus alone when opened with the mouse', () => {
+    const { quill, host } = setup()
+    const tableButton = host.querySelector<HTMLButtonElement>('button.ql-table')
+
+    quill.setSelection(0, 0)
+    tableButton?.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    tableButton?.click()
+
+    expect(host.querySelector('.qlt-picker')?.contains(document.activeElement)).toBe(false)
+  })
+
   it('inserts the hovered size on click', () => {
     const { quill, host } = setup()
 

@@ -18,6 +18,13 @@ describe('normalizeColor', () => {
 
   it('turns rgb() into hex, the same way Quill stores text colors', () => {
     expect(normalizeColor('rgb(255, 242, 204)')).toBe('#fff2cc')
+    expect(normalizeColor('RGB(0,0,0)')).toBe('#000000')
+  })
+
+  it('keeps other ways of writing rgb() as they are', () => {
+    expect(normalizeColor('rgb(255 0 0)')).toBe('rgb(255 0 0)')
+    expect(normalizeColor('rgb(255, 0, 0, 0.5)')).toBe('rgb(255, 0, 0, 0.5)')
+    expect(normalizeColor('rgb(50%, 0%, 0%)')).toBe('rgb(50%, 0%, 0%)')
   })
 
   it('asks the browser about color names, so a made-up word is not a color', () => {

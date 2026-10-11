@@ -1,6 +1,6 @@
 import type Quill from 'quill'
 import type { Range } from 'quill'
-import type Keyboard from 'quill/modules/keyboard'
+import type Keyboard from 'quill/modules/keyboard.js'
 import { TableCellLine } from '../../blots'
 import { deleteSelectedContent } from '../selectedCells'
 import { isInTable, lineAt } from '../selection'
@@ -12,39 +12,49 @@ const WITH_ANY_MODIFIER_KEYS = { shiftKey: null, altKey: null, ctrlKey: null, me
 
 const LIST_SHORTCUT_PREFIX = /^\s*?(\d+\.|-|\*|\[ ?\]|\[x\])$/
 
-// Quill's default bindings for these keys would run first otherwise
-const addPriorityBinding = (keyboard: Keyboard, binding: KeyBinding): void => {
-  keyboard.addBinding(binding)
+const priorityBindings = (keyboard: Keyboard, signal: AbortSignal) => {
+  const addedBindings: [key: string, binding: Keyboard['bindings'][string][number]][] = []
 
-  const bindingsForKey = keyboard.bindings[binding.key]
+  signal.addEventListener('abort', () => {
+    for (const [key, binding] of addedBindings) {
+      const bindingsForKey = keyboard.bindings[key] ?? []
+      const bindingIndex = bindingsForKey.indexOf(binding)
 
-  if (bindingsForKey && bindingsForKey.length > 1) {
-    bindingsForKey.unshift(bindingsForKey.pop() as (typeof bindingsForKey)[number])
+      if (bindingIndex >= 0) bindingsForKey.splice(bindingIndex, 1)
+    }
+  })
+
+  return (binding: KeyBinding): void => {
+    keyboard.addBinding(binding)
+
+    const bindingsForKey = keyboard.bindings[binding.key]
+    const addedBinding = bindingsForKey?.pop()
+
+    if (!bindingsForKey || !addedBinding) return
+
+    bindingsForKey.unshift(addedBinding)
+    addedBindings.push([binding.key, addedBinding])
   }
 }
 
-export const installKeyboard = (quill: Quill, moveToCell: (direction: 1 | -1) => boolean): void => {
-  const { keyboard } = quill
+export const installKeyboard = (
+  quill: Quill,
+  moveToCell: (direction: 1 | -1) => boolean,
+  signal: AbortSignal,
+): void => {
+  const addPriorityBinding = priorityBindings(quill.keyboard, signal)
 
   const deleteSelectionIfItSpansCells = (range: Range): boolean => !deleteSelectedContent(quill, range)
 
-  addPriorityBinding(keyboard, {
-    key: 'Tab',
-    shiftKey: false,
-    handler: (range) => !(isInTable(quill, range) && moveToCell(1)),
-  })
+  addPriorityBinding({ key: 'Tab', shiftKey: false, handler: (range) => !(isInTable(quill, range) && moveToCell(1)) })
 
-  addPriorityBinding(keyboard, {
-    key: 'Tab',
-    shiftKey: true,
-    handler: (range) => !(isInTable(quill, range) && moveToCell(-1)),
-  })
+  addPriorityBinding({ key: 'Tab', shiftKey: true, handler: (range) => !(isInTable(quill, range) && moveToCell(-1)) })
 
   for (const [key, direction] of [
     ['ArrowUp', -1],
     ['ArrowDown', 1],
   ] as const) {
-    addPriorityBinding(keyboard, {
+    addPriorityBinding({
       key,
       collapsed: true,
       shiftKey: false,
@@ -52,7 +62,7 @@ export const installKeyboard = (quill: Quill, moveToCell: (direction: 1 | -1) =>
     })
   }
 
-  addPriorityBinding(keyboard, {
+  addPriorityBinding({
     key: 'Backspace',
     ...WITH_ANY_MODIFIER_KEYS,
     handler: (range) => {
@@ -76,7 +86,7 @@ export const installKeyboard = (quill: Quill, moveToCell: (direction: 1 | -1) =>
     },
   })
 
-  addPriorityBinding(keyboard, {
+  addPriorityBinding({
     key: 'Delete',
     ...WITH_ANY_MODIFIER_KEYS,
     handler: (range) => {
@@ -98,14 +108,9 @@ export const installKeyboard = (quill: Quill, moveToCell: (direction: 1 | -1) =>
     },
   })
 
-  addPriorityBinding(keyboard, {
-    key: 'Enter',
-    shiftKey: null,
-    collapsed: false,
-    handler: deleteSelectionIfItSpansCells,
-  })
+  addPriorityBinding({ key: 'Enter', shiftKey: null, collapsed: false, handler: deleteSelectionIfItSpansCells })
 
-  addPriorityBinding(keyboard, {
+  addPriorityBinding({
     key: ' ',
     shiftKey: null,
     collapsed: true,

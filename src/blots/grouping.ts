@@ -1,10 +1,9 @@
-import Quill from 'quill'
-import type ContainerType from 'quill/blots/container'
+import type ContainerType from 'quill/blots/container.js'
 import type { TableCellValue } from '../model/cellValue'
 import type { ParchmentTypes } from '../utils/quill'
 import { firstLine, lastLine } from './TableCellLine'
 
-export const Container = Quill.import('blots/container') as typeof ContainerType
+export { Container } from './lengthCache'
 export type OptimizeContext = Parameters<ContainerType['optimize']>[0]
 
 type Blot = ParchmentTypes.Blot

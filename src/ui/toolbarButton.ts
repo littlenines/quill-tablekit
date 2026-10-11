@@ -1,5 +1,5 @@
 import Quill from 'quill'
-import type Toolbar from 'quill/modules/toolbar'
+import type Toolbar from 'quill/modules/toolbar.js'
 
 export const setupToolbarButton = (
   quill: Quill,
@@ -14,9 +14,17 @@ export const setupToolbarButton = (
   if (!toolbar || !tableButton) return null
 
   // Quill only wires the button itself when 'table' is a registered format
-  const isWiredByQuill = toolbar.handlers.table != null || quill.scroll.query('table') != null
+  const previousHandler = toolbar.handlers.table
+  const isWiredByQuill = previousHandler != null || quill.scroll.query('table') != null
 
   toolbar.addHandler('table', onClick)
+  
+  signal.addEventListener('abort', () => {
+    if (toolbar.handlers.table !== onClick) return
+
+    if (previousHandler) toolbar.handlers.table = previousHandler
+    else delete toolbar.handlers.table
+  })
 
   if (!isWiredByQuill) {
     tableButton.addEventListener(

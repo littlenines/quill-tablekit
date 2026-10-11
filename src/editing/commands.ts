@@ -1,6 +1,9 @@
 import Quill from 'quill'
 import type { Range } from 'quill'
 import { TableContainer } from '../blots'
+import { withLinesKeptInPlace } from '../blots/lengthCache'
+import { CELL_FORMAT } from '../config/constants'
+import type { TableCellValue } from '../model/cellValue'
 import type { CellData } from '../model/cell'
 import type { WidthUnit } from '../model/properties'
 import { TableModel } from '../model/TableModel'
@@ -17,6 +20,22 @@ export const updateWithHistory = (quill: Quill, documentChange: Delta): void => 
   quill.history.cutoff()
 }
 
+const lineIdsOf = (contents: Delta) =>
+  contents.ops.flatMap(({ attributes }) => {
+    const cellValue = attributes?.[CELL_FORMAT] as TableCellValue | undefined
+
+    return cellValue ? [`${cellValue.table} ${cellValue.row} ${cellValue.cell}`] : []
+  })
+
+const onlyFormatsLines = (contentChange: Delta, originalContents: Delta, updatedContents: Delta): boolean => {
+  if (contentChange.ops.some((operation) => operation.retain == null)) return false
+
+  const originalIds = lineIdsOf(originalContents)
+  const updatedIds = lineIdsOf(updatedContents)
+
+  return originalIds.length === updatedIds.length && originalIds.every((lineId, index) => lineId === updatedIds[index])
+}
+
 export const commitTable = (
   quill: Quill,
   { model, originalContents, tableStart }: TableContext,
@@ -26,7 +45,15 @@ export const commitTable = (
   const updatedContents = model.isEmpty ? new Delta() : model.toDelta(widthsToSave(model, percentBasis(quill)))
   const contentChange = originalContents.diff(updatedContents)
 
-  if (contentChange.ops.length > 0) updateWithHistory(quill, new Delta().retain(tableStart).concat(contentChange))
+  if (contentChange.ops.length > 0) {
+    const documentChange = new Delta().retain(tableStart).concat(contentChange)
+
+    if (onlyFormatsLines(contentChange, originalContents, updatedContents)) {
+      withLinesKeptInPlace(() => updateWithHistory(quill, documentChange))
+    } else {
+      updateWithHistory(quill, documentChange)
+    }
+  }
 
   if (cellToFocus) {
     const cellOffset = model.cellOffset(cellToFocus.id)

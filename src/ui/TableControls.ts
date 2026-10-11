@@ -28,6 +28,7 @@ export class TableControls {
   #toolbarButton: HTMLButtonElement | null
   #actionBar: ActionBar | null = null
   #menuPosition: MenuPosition = { clientX: 0, clientY: 0, anchor: null }
+  #isUsingKeyboard = false
 
   constructor(
     quill: Quill,
@@ -56,6 +57,8 @@ export class TableControls {
       () => this.#handleToolbarClick(),
       signal,
     )
+    this.#toolbarButton?.addEventListener('keydown', () => (this.#isUsingKeyboard = true), { signal })
+    this.#toolbarButton?.addEventListener('pointerdown', () => (this.#isUsingKeyboard = false), { signal })
 
     if (settings.actionBar && settings.menu.length > 0) {
       this.#actionBar = new ActionBar(
@@ -157,6 +160,13 @@ export class TableControls {
       this.openMenu({ clientX: left, clientY: bottom + 4, anchor: toolbarButton })
     } else {
       this.#picker.open(toolbarButton)
+    }
+
+    // Opened from the keyboard, the focus goes into the picker or menu, and Escape brings it back to the button
+    if (this.#isUsingKeyboard) {
+      for (const popover of [this.#picker.popover, this.#menu.popover]) {
+        if (popover.isOpen) popover.focusFirst()
+      }
     }
   }
 
