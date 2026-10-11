@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 12-10-2026
+
+### Changed
+
+- Added a link to the [live demo](https://quill-tablekit.vercel.app/) in the README and docs
+
 ## [0.1.1] - 12-10-2026
 
 First release.
