@@ -78,10 +78,43 @@ If you render articles on the server, save `quill.getSemanticHTML()` next to the
 
 ## Cleanup
 
-`destroy()` removes the module's event listeners and its popups (the picker, the menu, the cell highlight and the resize line). Call it before you remove the editor:
+`destroy()` removes everything the module added: its event listeners, its popups (the picker, the menu, the action bar, the cell highlight and the resize lines), its keyboard shortcuts, its paste handling and the toolbar button's handler. Call it before you remove the editor:
 
 - when the editor component unmounts
 - when the user goes to another page in a single-page app
 - when you create the Quill instance again yourself
 
 In development, React's Strict Mode runs effects twice. That's fine as long as `destroy()` is in the cleanup.
+
+## Vue, Svelte, Angular and others
+
+Other frameworks work the same way: create Quill when the component mounts, and call `destroy()` when it unmounts. In Vue:
+
+```vue
+<script setup>
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import Quill from 'quill'
+import TableKit from 'quill-tablekit'
+import 'quill/dist/quill.snow.css'
+
+Quill.register('modules/tableKit', TableKit)
+
+const editorElement = ref(null)
+let quill = null
+
+onMounted(() => {
+  quill = new Quill(editorElement.value, {
+    theme: 'snow',
+    modules: { toolbar: [['bold', 'italic'], ['table']], tableKit: true },
+  })
+})
+
+onBeforeUnmount(() => quill?.getModule('tableKit').destroy())
+</script>
+
+<template>
+  <div ref="editorElement" />
+</template>
+```
+
+Quill needs a browser, so with server rendering (Next.js, Nuxt, Astro, SvelteKit) load the editor on the client only, like with `next/dynamic` and `ssr: false`, Nuxt's `<ClientOnly>` or Astro's `client:only`.

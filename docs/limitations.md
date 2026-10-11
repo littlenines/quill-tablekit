@@ -1,18 +1,36 @@
 # Limitations
 
-- Only Quill 2. Quill 1 can't nest blots, which merged cells need. With Quill 1 you get a console warning and the module does nothing.
-- No tables inside tables. Inserting a table while you're in a cell puts it below the current table, and pasting a table into a cell overwrites the cells there instead (see [Usage](./usage.md#pasting-a-table-into-a-table)).
-- Cells can only hold normal lines. Bold, links, colors, images and alignment all work. Headers, lists, code blocks and quotes don't: if you try to apply one inside a cell, nothing happens. Otherwise the line would get pulled out of the table.
-- With `responsiveWidths: false`, column widths are in px. Once you resize a column, the table keeps that pixel width, even if the editor gets narrower later.
-- A responsive table still can't get narrower than its columns' content and the cell padding, so on a very narrow screen it can be wider than its percentage.
-- A row can't be dragged shorter than its content. The saved height is a minimum, not an exact height.
-- Don't use it together with Quill's built-in `table` module. They both want the `table` toolbar button.
-- Other Delta-to-HTML libraries don't understand the table format. Use `quill.getSemanticHTML()` instead (see [Saved content](./content.md#html)).
-- Border color is for the whole table, not single cells. With `border-collapse`, two cells next to each other share one border, and the browser only draws one of their colors. A colored border on one cell would show on two sides and not the other two.
-- Table alignment (left, center, right) only does something when the table is narrower than the editor. A new table is full width until you resize a column.
-- Copying a table from another site brings the header row, cell backgrounds, alignment, a caption and a missing or dashed border along, but not its border color. Stripes are recognized by their pattern: every other row has the same background and the rows between don't. That needs at least two colored rows, except for this module's default stripe color. A table where you colored every other row by hand comes back as a striped table, which looks the same.
-- The caption is plain text, no bold or links. In the editor you change it in Table properties, not by typing above the table.
-- In the saved HTML, striped rows without their own stripe color use `#f6f8fa`, even if you changed `--qlt-stripe-bg` for the editor. Pick the color in Table properties if it should be in the saved HTML too.
-- **Copy table** needs the browser's Clipboard API for the best result, which only works on `https://` pages and `localhost`. Elsewhere it falls back to the older copy command, and if the browser blocks that too, `copyTable()` returns `false`.
-- Pasting a table into a table doesn't merge cells in the target, even if they were merged in the copy.
-- **Copy as Markdown** loses what Markdown can't show: merged cells, colors, borders, row heights, widths, the header column and the caption. Other Markdown in pasted text, like headings and lists, stays plain text. Only the tables are converted.
+What the module can't do.
+
+## Compatibility
+
+- **Quill 2 only.** Quill 1 can't nest blots, which merged cells need. With Quill 1 you get a console warning and the module does nothing.
+- **Not together with Quill's built-in `table` module.** Both want the `table` toolbar button.
+- **Other Delta-to-HTML libraries** don't understand the table format. Use `quill.getSemanticHTML()` instead (see [Saved content](./content.md#html)).
+
+## What a cell can hold
+
+- **No tables inside tables.** Inserting a table from a cell puts it below the current table, and pasting a table into a cell fills the cells instead (see [Pasting a table into a table](./usage.md#pasting-a-table-into-a-table)).
+- **Only normal lines.** Bold, links, colors, images and alignment all work. Headers, lists, code blocks and quotes don't: applying one in a cell does nothing, because it would pull the line out of the table.
+- **The caption is plain text**, without bold or links. You change it in Table properties, not by typing above the table.
+
+## Sizes
+
+- **A row height is a minimum.** A row can't be dragged shorter than its content.
+- **Table alignment** only does something when the table is narrower than the editor. A new table is full width until you resize it.
+- **A responsive table can't get narrower than its content** and cell spacing, so on a very narrow screen it can be wider than its percentage.
+- **With `responsiveWidths: false`**, a resized table keeps its pixel width, even if the editor gets narrower later.
+
+## Styles
+
+- **Border color is for the whole table**, not single cells. Two cells next to each other share one border, and the browser only draws one of their colors.
+- **Stripes in the saved HTML** use `#f6f8fa` unless a stripe color is picked in Table properties, even if you changed `--qlt-stripe-bg` for the editor.
+
+## Copy and paste
+
+- **Copying works best on `https://` pages.** The Clipboard API only works on `https://` pages and `localhost`. Elsewhere the module falls back to the older copy command, and if the browser blocks that too, `copyTable()` returns `false`.
+- **Tables from other sites** keep their header row, cell colors, alignment, caption and border style, but not their border color.
+- **Stripes are recognized by their pattern**: every other row has the same background and the rows between don't. That needs at least two colored rows, unless it's this module's own stripe color. A table where you colored every other row by hand comes back as a striped table, which looks the same.
+- **Pasting a table into a table** doesn't merge cells in the target, even if they were merged in the copy.
+- **Copy as Markdown** leaves out what Markdown can't show: merged cells, colors, borders, sizes, the header column and the caption.
+- **Only Markdown tables are converted.** Headings, lists and other Markdown around a pasted table stay plain text.

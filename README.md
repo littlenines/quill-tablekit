@@ -229,11 +229,14 @@ quill.getModule('tableKit')?.destroy()
 
 ## Docs
 
+All pages are also listed on the [docs page](https://github.com/littlenines/quill-tablekit/blob/master/docs/README.md).
+
+- [Installation](https://github.com/littlenines/quill-tablekit/blob/master/docs/installation.md): npm, CDN, Quill versions
 - [Usage](https://github.com/littlenines/quill-tablekit/blob/master/docs/usage.md): inserting, merging, resizing, properties, keyboard, copy and paste
 - [Options](https://github.com/littlenines/quill-tablekit/blob/master/docs/options.md): all settings, labels, icons, CSS variables
 - [API](https://github.com/littlenines/quill-tablekit/blob/master/docs/api.md): every method
 - [Saved content](https://github.com/littlenines/quill-tablekit/blob/master/docs/content.md): the Delta and the HTML
-- [React](https://github.com/littlenines/quill-tablekit/blob/master/docs/react.md): editor component and read-only viewer
+- [React](https://github.com/littlenines/quill-tablekit/blob/master/docs/react.md): editor component, read-only viewer, Vue and other frameworks
 - [Troubleshooting](https://github.com/littlenines/quill-tablekit/blob/master/docs/troubleshooting.md): common problems
 - [Limitations](https://github.com/littlenines/quill-tablekit/blob/master/docs/limitations.md): what doesn't work
 - [How it works](https://github.com/littlenines/quill-tablekit/blob/master/docs/architecture.md): the code, running it locally, tests

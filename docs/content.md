@@ -1,5 +1,11 @@
 # Saved content
 
+| You want to...                             | Use                                                             |
+| ------------------------------------------ | --------------------------------------------------------------- |
+| Save the document and edit it again later  | `quill.getContents()`, and `quill.setContents()` to load        |
+| Show it on a page with JavaScript          | A read-only Quill, see [below](#load-it-into-a-read-only-quill) |
+| Show it without Quill (server, email, app) | `quill.getSemanticHTML()`, see [HTML](#html)                    |
+
 ## What the Delta looks like
 
 Tables are stored in the normal Quill Delta. So `getContents()`, `setContents()`, `updateContents()` and undo all just work.
@@ -69,7 +75,16 @@ import type { TableCellValue } from 'quill-tablekit'
 
 `quill.getSemanticHTML()` gives you normal HTML you can use outside the editor. Tables come out as a plain `<table>` with `rowspan` and `colspan`, a `<colgroup>` if columns were resized, and simple borders. None of the editor's classes or data attributes are in there.
 
-The properties come along as inline styles: cell backgrounds, vertical alignment, row heights, the border color and style, the cell spacing and the table's alignment. Striped rows come out as a `background-color` on the cells of every other row, in the table's stripe color. If the table has a header row, it's in a `<thead>`, and its cells are `<th scope="col">` instead of `<td>`, bold and with a light gray background. The only exception is a header cell that's merged down into the next row: a cell can't be in `<thead>` and `<tbody>` at once, so then the header row stays in `<tbody>`. Header column cells are `<th scope="row">`. Percent widths come out as percentages on the `<table>` and its `<col>` elements. A caption comes out as `<caption>`, the first thing in the table, with `style="caption-side: bottom;"` if it goes under the table. Text alignment inside a table comes out both as Quill's `ql-align-center` class and as an inline `text-align`, so it also works where Quill's CSS isn't loaded, like in emails.
+The table's styles are saved as inline styles, so they work without any CSS:
+
+- **Cell styles:** backgrounds, vertical alignment and row heights.
+- **Table styles:** the border color and style, the cell spacing and the table's alignment.
+- **Stripes:** a `background-color` on the cells of every other row.
+- **Header row:** in a `<thead>`, with `<th scope="col">` cells, bold and with a light gray background. If a header cell is merged down into the next row, the header stays in `<tbody>`, since a cell can't be in both.
+- **Header column:** `<th scope="row">` cells.
+- **Widths:** a `<colgroup>`, in percent or px like in the editor.
+- **Caption:** a `<caption>`, with `style="caption-side: bottom;"` if it goes under the table.
+- **Text alignment:** both Quill's `ql-align-center` class and an inline `text-align`, so it also works where Quill's CSS isn't loaded, like in emails.
 
 ```html
 <table style="border-collapse: collapse; table-layout: fixed; width: 100%;">
