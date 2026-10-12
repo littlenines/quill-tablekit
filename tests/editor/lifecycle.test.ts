@@ -117,6 +117,6 @@ describe('destroy', () => {
     tableKit.destroy()
 
     expect(bindingsBefore - bindingCount()).toBe(8)
-    expect(matcherCount - quill.clipboard.matchers.length).toBe(3)
+    expect(matcherCount - quill.clipboard.matchers.length).toBe(4)
   })
 })

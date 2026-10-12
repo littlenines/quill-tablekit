@@ -129,6 +129,15 @@ export const matchTableCell = (cellNode: Node, cellContent: Delta, scroll: Scrol
 
 export const matchCaption = (): Delta => new Delta()
 
+const PARTS_WITHOUT_TEXT = new Set(['TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'COLGROUP'])
+
+// Indented HTML has line breaks between the tags, and Quill would add them as a space to the next cell
+export const matchTableWhitespace = (textNode: Node, content: Delta): Delta => {
+  const parentTag = textNode.parentElement?.tagName ?? ''
+
+  return PARTS_WITHOUT_TEXT.has(parentTag) && !textNode.textContent?.trim() ? new Delta() : content
+}
+
 export const matchTableRow = (_rowNode: Node, rowContent: Delta): Delta =>
   new Delta(
     rowContent.ops.map(({ attributes, ...operation }) => {

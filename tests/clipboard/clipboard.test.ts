@@ -1,7 +1,32 @@
 import { describe, expect, it } from 'vitest'
-import { cellLines, cells, paste, setup, setupWithTable, shape, tables } from '../helpers'
+import { cellLines, cellTexts, cells, paste, setup, setupWithTable, shape, tables } from '../helpers'
 
 describe('pasting HTML tables', () => {
+  it('ignores the line breaks between the tags of indented HTML', () => {
+    const { quill } = setup()
+    const indentedTable = [
+      '<table>',
+      '  <thead>',
+      '    <tr>',
+      '      <th>A</th>',
+      '      <th>B</th>',
+      '    </tr>',
+      '  </thead>',
+      '  <tbody>',
+      '    <tr>',
+      '      <td>1</td>',
+      '      <td>2 and 3</td>',
+      '    </tr>',
+      '  </tbody>',
+      '</table>',
+    ].join('\n')
+
+    quill.setSelection(0, 0)
+    paste(quill, { 'text/html': indentedTable })
+
+    expect(cellTexts(quill)).toEqual(['A', 'B', '1', '2 and 3'])
+  })
+
   it('turns them into table lines, keeping spans and multi-line cells', () => {
     const { quill } = setup()
 

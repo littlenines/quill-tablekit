@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 12-10-2026
+
+### Fixed
+
+- Pasted HTML tables written with indentation no longer get a space at the start of their cells
+
 ## [0.1.2] - 12-10-2026
 
 ### Changed

@@ -4,7 +4,7 @@ import { registerBlots, type TableContainer } from './blots'
 import { CELL_FORMAT } from './config/constants'
 import { resolveOptions, type ResolvedTableKitOptions, type TableKitOptions } from './config/options'
 import { clipboardContentOf, wholeTableArea, writeToClipboard } from './editing/clipboard/cellClipboard'
-import { matchCaption, matchTableCell, matchTableRow } from './editing/clipboard/pasteMatchers'
+import { matchCaption, matchTableCell, matchTableRow, matchTableWhitespace } from './editing/clipboard/pasteMatchers'
 import * as commands from './editing/commands'
 import { moveToCell } from './editing/input/cellNavigation'
 import { selectCells } from './editing/selectedCells'
@@ -92,11 +92,12 @@ class TableKit extends Module<TableKitOptions> {
       ]
     }
 
-    const pasteMatchers = [matchTableCell, matchTableRow, matchCaption]
+    const pasteMatchers = [matchTableCell, matchTableRow, matchCaption, matchTableWhitespace]
 
     quill.clipboard.addMatcher('td, th', matchTableCell)
     quill.clipboard.addMatcher('tr', matchTableRow)
     quill.clipboard.addMatcher('caption', matchCaption)
+    quill.clipboard.addMatcher(Node.TEXT_NODE, matchTableWhitespace)
     signal.addEventListener('abort', () => {
       quill.clipboard.matchers = quill.clipboard.matchers.filter(([, matcher]) => !pasteMatchers.includes(matcher))
     })
