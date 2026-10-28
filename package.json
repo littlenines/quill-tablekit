@@ -3,7 +3,7 @@
   "version": "0.1.3",
   "description": "Tables for Quill 2. Merge cells, resize columns, and paste tables from Word, Excel or Markdown.",
   "type": "module",
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@12.15.0",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
   "unpkg": "dist/index.iife.js",
